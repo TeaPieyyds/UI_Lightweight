@@ -1,0 +1,166 @@
+/* Mobile-Optimized Styles for UI_Lightweight_Tea (M3E Canvas adapted) */
+
+/* ========== Viewport & Meta Fixes ========== */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for in-app browsers (X, Instagram, LINE, WeChat) */
+.app-root {
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-h, 100dvh);
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ========== Touch Optimization ========== */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button, [role="button"], .m3-tile {
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+}
+
+/* Increase touch targets */
+.m3-press {
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1), background 120ms, color 120ms;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.m3-press:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+/* ========== Mobile Layout Overrides ========== */
+@media (max-width: 767px) {
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Make canvas full viewport */
+  .canvas-container {
+    width: 100vw !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  
+  /* Phone frame optimization */
+  [data-screen="phone"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+  }
+  
+  /* Bottom toolbar for mobile */
+  .mobile-toolbar {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+  
+  /* Sidebar panels as bottom sheets */
+  .sidebar-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 70dvh !important;
+    border-radius: 16px 16px 0 0 !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* ========== Tablet Layout ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .canvas-container {
+    max-width: 100% !important;
+  }
+}
+
+/* ========== Safe Area Handling ========== */
+@supports (padding: max(0px)) {
+  .mobile-toolbar {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
+  }
+  
+  header {
+    padding-top: max(env(safe-area-inset-top), 8px) !important;
+  }
+}
+
+/* ========== Performance Optimizations ========== */
+@media (prefers-reduced-motion: reduce) {
+  .m3-press,
+  .m3-tile {
+    transition: none;
+  }
+  .m3-spin,
+  .m3e-reveal [data-screen] > * {
+    animation: none;
+  }
+}
+
+/* ========== Scrollbar Styling ========== */
+.no-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d6cfe0 transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.no-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6cfe0;
+  border-radius: 999px;
+}
+
+/* ========== Mobile-First Font Sizing ========== */
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+/* ========== Prevent Zoom on Input Focus ========== */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* ========== Modal/Dialog Overlay ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+@media (max-width: 767px) {
+  .modal-overlay {
+    align-items: flex-end;
+  }
+  
+  .modal-content {
+    max-height: 85dvh !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+}

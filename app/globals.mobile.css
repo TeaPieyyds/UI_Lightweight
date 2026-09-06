@@ -1,0 +1,116 @@
+/* Mobile-First Global Styles */
+@import "tailwindcss";
+
+/* Viewport Height Fix for Mobile Browsers */
+:root {
+  --app-h: 100vh;
+}
+
+@media (display-mode: standalone) {
+  :root {
+    --app-h: 100dvh;
+  }
+}
+
+html, body {
+  height: 100%;
+  height: var(--app-h);
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-root {
+  height: 100%;
+  height: var(--app-h);
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Prevent text selection on touch */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in inputs and textareas */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Touch-optimized buttons */
+button, .m3-btn, [role="button"] {
+  min-height: 48px;
+  min-width: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile viewport fix */
+@supports (height: 100dvh) {
+  .app-root, body, html {
+    height: 100dvh;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  .safe-top { padding-top: max(env(safe-area-inset-top), 8px); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+  .safe-left { padding-left: max(env(safe-area-inset-left), 8px); }
+  .safe-right { padding-right: max(env(safe-area-inset-right), 8px); }
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 767px) {
+  /* Reduce padding on mobile */
+  .px-6 { padding-left: 12px; padding-right: 12px; }
+  .px-8 { padding-left: 16px; padding-right: 16px; }
+  
+  /* Make cards full width on mobile */
+  .max-w-md { max-width: 100%; }
+  
+  /* Stack columns vertically */
+  .flex-row { flex-direction: column; }
+  .flex-row-reverse { flex-direction: column-reverse; }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop-only utilities */
+@media (max-width: 1023px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
