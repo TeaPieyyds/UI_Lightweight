@@ -1,0 +1,68 @@
+Business Source License 1.1
+
+The Business Source License (Business Source License 1.1 or BSL 1.1) is a combination of
+the Commercial Terms of Business Source License 1.1 and an Open Source license of choice,
+the Open Source license portion is provided in the `Open Source License` block.
+
+1. License granted. This Business Source License 1.1 ("License") governs use of the
+source code version of the work identified by the Change Date and License Change Date
+together with all changes to the source code of the work made by the copyright holder
+in accordance with the terms of this License. Capitalized terms are defined in the
+Business Source License 1.1.
+
+2. Permitted Uses. You may (a) copy and use the Licensed Software in any manner or
+media, (b) modify the Licensed Software in whole or in part to create Derivative Works,
+(c) create and use Aggregations, and (d) redistribute the Licensed Software, Derivative
+Works, or Aggregations, in each case subject to the terms of this License.
+
+3. Restrictions. You shall not make the Licensed Software available to third parties,
+or use it commercially, to the extent prohibited by the Commercial Terms below. You
+retain the right to use it internally and to modify it per the terms of this License.
+
+---
+Commercial Terms
+---
+
+The Change Date is [4 Years after Initial Public Release Date].
+The Change License is Apache License 2.0.
+The Commercial Use License Fee is US$0 (free; no commercial use is permitted before
+the License Change Date without the copyright holder's separate written authorization).
+
+The License Change Date is [4 Years after Initial Public Release Date] (180 days
+after Change Date), at which point the Open Source License below automatically
+governs the work.
+
+Copyright 2026 TeaPieyyds / 澪澪 & 主人 (Tea_Pieyyds)
+
+---
+Open Source License
+---
+
+Apache License, Version 2.0 (text available at https://www.apache.org/licenses/LICENSE-2.0.txt)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+用途说明（中文）
+---
+
+本作品（M3 Canvas / UI_Lightweight）采用 **BUSL-1.1** 业务源码许可证开源：
+
+- ✅ 完全开源、免费：任何人可以免费阅读、下载、修改、学习、用于个人与内部用途。
+- ❌ 商业限制：在「转换日」（自首次公开发布起 4 年）之前，**不得将本软件作为
+  商业产品的一部分对外售卖、收费分发或用于商业化运营**，除非另行获得版权方
+  书面授权。
+- 🔄 自动转开源：到达转换日后，许可证自动变更为 Apache-2.0，届时可自由商用。
+
+简言之：免费、开源、非圈钱；4 年后完全开放商用。
