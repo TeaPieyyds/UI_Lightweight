@@ -240,6 +240,16 @@ body.preview .canvas{border-radius:0;box-shadow:none;}
 .sb-item:active{background:var(--sur-v);}
 .sb-item .sii{font-size:16px;width:20px;text-align:center;color:var(--on-sur-v);}
 .sb-empty{padding:30px 20px;text-align:center;color:var(--on-sur-v);font-size:13px;}
+/* 侧边栏内嵌滑条 */
+.sb-slider{padding:10px 14px 12px 46px;}
+.sb-slider-head{display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--on-sur);margin-bottom:8px;}
+.sb-slider-head .sii{font-size:16px;width:20px;text-align:center;
+  color:var(--on-sur-v);}
+.sb-slider-head b{color:var(--pri);font-weight:600;}
+.sb-slider input[type=range]{width:100%;display:block;}
+.sb-slider-ticks{display:flex;justify-content:space-between;
+  font-size:10px;color:var(--on-sur-v);margin-top:2px;}
 
 .sb-overlay,.sheet-overlay{position:fixed;inset:0;z-index:490;
   background:rgba(0,0,0,.4);display:none;}
@@ -1397,6 +1407,8 @@ function setSnapStrength(v){
   if(s2&&+s2.value!==idx)s2.value=idx;
   const lb=document.getElementById('snapStrengthLabel');
   if(lb)lb.textContent=SNAP_LEVELS[idx].name;
+  const slb=document.getElementById('sbSnapLabel');
+  if(slb)slb.textContent=SNAP_LEVELS[idx].name;
 }
 
 function renderAll(){
@@ -2001,9 +2013,7 @@ const SIDEBAR_CFG=[
   {id:'settings',i:'⚙',t:'设置',items:[
     {id:'set:open',i:'⚙',t:'打开设置面板',action:()=>toggleSheet('settingsSheet')},
     {id:'set:grid',i:'▦',t:'显示/隐藏网格',action:toggleGrid},
-    {id:'set:snap',i:'🧲',t:'吸附：严格',action:()=>{setSnapStrength('0');}},
-    {id:'set:snap2',i:'🧲',t:'吸附：适中',action:()=>{setSnapStrength('1');}},
-    {id:'set:snap3',i:'🧲',t:'吸附：开放',action:()=>{setSnapStrength('2');}},
+    {id:'set:snap-slider',i:'🧲',t:'吸附松紧',slider:'snap'},
     {id:'set:clearconn',i:'🧹',t:'清空所有连接',action:clearConnections,cond:()=>(S.connections||[]).length>0},
   ]},
   {id:'theme',i:'🎨',t:'外观',items:[
@@ -2072,10 +2082,20 @@ function renderSidebar(filter){
     anyVisible=true;
     const open=(!f&&S.sidebarTab===g.id)?'open':'';
     html+=`<div class="sb-group ${open}" data-gid="${g.id}"><div class="sb-group-t" onclick="toggleGroup('${g.id}')"><span class="sgi">${g.i}</span><span class="sgt">${g.t}</span><span class="sga">›</span></div>
-      <div class="sb-items">${items.map(it=>`<div class="sb-item" onclick="sbRun('${it.id}')"><span class="sii">${it.i}</span><span>${it.t}</span></div>`).join('')}</div></div>`;
+      <div class="sb-items">${items.map(it=>it.slider==='snap'?sbSnapSlider(it):`<div class="sb-item" onclick="sbRun('${it.id}')"><span class="sii">${it.i}</span><span>${it.t}</span></div>`).join('')}</div></div>`;
   });
   if(!anyVisible)html=`<div class="sb-empty">没有找到 "<b>${esc(filter)}</b>"</div>`;
   body.innerHTML=html;
+}
+function sbSnapSlider(it){
+  const idx=snapLevelFromPx(S.snapStrength);
+  return `<div class="sb-slider">
+    <div class="sb-slider-head"><span class="sii">${it.i}</span><span>${it.t}</span>
+      <b id="sbSnapLabel">${SNAP_LEVELS[idx].name}</b></div>
+    <input type="range" min="0" max="2" step="1" value="${idx}"
+      oninput="setSnapStrength(this.value)">
+    <div class="sb-slider-ticks"><span>严格</span><span>适中</span><span>开放</span></div>
+  </div>`;
 }
 function toggleGroup(gid){
   const g=document.querySelector(`.sb-group[data-gid="${gid}"]`);if(!g)return;
