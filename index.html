@@ -584,6 +584,50 @@ body.preview .part.locked::after{display:none;}
   color:var(--on-sur-v);font-size:12px;gap:6px;pointer-events:none;}
 .pv-page .pv-empty .big{font-size:36px;opacity:.4;}
 
+/* ===== 滚动页面（单页纵向滚动） ===== */
+.scrollpage{position:relative;overflow:hidden;border-radius:var(--r-md);
+  background:var(--sur-v);}
+body.preview .part.scrollpage{touch-action:auto;}
+.scrollpage .sp-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;touch-action:pan-y;}
+.scrollpage .sp-content{position:relative;width:100%;min-height:100%;}
+.scrollpage.sp-card{box-shadow:0 2px 10px rgba(0,0,0,.14);background:var(--sur);}
+.scrollpage.sp-outlined{border:1px solid var(--out);background:transparent;}
+.scrollpage .sp-empty{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;color:var(--on-sur-v);font-size:12px;gap:6px;pointer-events:none;}
+.scrollpage .sp-empty .big{font-size:36px;opacity:.4;}
+/* 编辑滚动页面内容时，画布允许纵向滚动 */
+.canvas.page-edit.scroll-editing{overflow-y:auto;align-items:flex-start;}
+
+/* ===== 标题组件 ===== */
+.m3title{position:absolute;display:flex;align-items:center;box-sizing:border-box;
+  padding:0 16px;font-family:var(--font);color:var(--on-sur);
+  transition:background .3s ease,color .3s ease,box-shadow .3s ease,border-color .3s ease;}
+.m3title .title-inner{display:flex;align-items:center;gap:8px;width:100%;overflow:hidden;}
+.m3title .title-ico{font-size:20px;flex:0 0 auto;}
+.m3title .title-main{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.m3title .title-sub{display:block;font-size:11px;opacity:.7;margin-left:8px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-weight:400;}
+.m3title-solid{background:var(--title-pri);color:#fff;}
+.m3title-outline{border-bottom:1.5px solid color-mix(in srgb,var(--title-pri) 45%,transparent);
+  background:transparent;}
+.m3title-glass{background:color-mix(in srgb,var(--sur) 70%,transparent);
+  backdrop-filter:blur(14px) saturate(180%);-webkit-backdrop-filter:blur(14px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.4);}
+.m3title-gradient{background:linear-gradient(135deg,var(--title-pri),
+  color-mix(in srgb,var(--title-pri) 55%,#fff));color:#fff;}
+.m3title-elevated{background:var(--sur);box-shadow:0 2px 10px rgba(0,0,0,.16);}
+.m3title-plain{background:transparent;}
+.m3title-edit{outline:1.5px dashed var(--pri);outline-offset:-2px;cursor:grab;}
+.m3title-edit::after{content:'标题';position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font-size:9px;color:var(--pri);background:color-mix(in srgb,var(--sur) 90%,var(--pri));
+  padding:1px 6px;border-radius:8px;pointer-events:none;}
+.m3title-fixed-layer{position:absolute;inset:0;pointer-events:none;z-index:660;}
+.m3title-fixed-layer .m3title{pointer-events:auto;}
+body.preview .m3title-edit{outline:none!important;}
+body.preview .m3title-edit::after{display:none;}
+.m3title.sel{outline:2px solid var(--pri);outline-offset:-2px;}
+
 body.preview .part input,
 body.preview .part textarea{
   border:none;background:transparent;font-family:var(--font);
@@ -1434,6 +1478,294 @@ function makeNavbarPart(){
   },defaultNavbar());
 }
 
+/* ================= 标题组件（顶部，可多屏同步） ================= */
+function defaultTitle(){
+  return {
+    text:'页面标题',
+    style:'solid',          // solid 实心 / outline 描边 / glass 玻璃 / gradient 渐变 / plain 无底 / elevated 悬浮
+    color:'',               // 主色，空=跟随主题
+    align:'left',           // 文字对齐 left/center/right
+    size:18,                // 字号
+    sub:'',                 // 副标题（可选）
+    icon:'',                // 左侧图标（可选）
+    height:56,
+    x:0, y:0, w:360,
+    screens:[],             // 同步显示到这些屏幕；空=全部
+    locked:false,hidden:false,
+  };
+}
+function makeTitlePart(){
+  const sz=getCanvasSize();
+  return Object.assign({id:uid(),type:'title'},defaultTitle(),{w:sz.w});
+}
+/* 该标题属于哪块屏幕（作为归属屏） */
+function titleHomeScreen(p){
+  if(!p)return S.cur;
+  for(const s of S.screens){ if((s.parts||[]).some(x=>x.id===p.id))return s.id; }
+  return S.cur;
+}
+/* 标题是否在指定屏幕显示 */
+function titleShownOnScreen(p,sid){
+  if(!p)return false;
+  if(sid===titleHomeScreen(p))return true;
+  const list=p.screens||[];
+  if(!list.length)return true;
+  return list.includes(sid);
+}
+/* 收集当前屏需要显示的标题（本屏 + 镜像） */
+function titlesForScreen(sid){
+  const out=[];
+  S.screens.forEach(s=>{
+    (s.parts||[]).forEach(p=>{
+      if(p.type!=='title')return;
+      const home=titleHomeScreen(p);
+      if(home===sid){out.push({p,mirror:false});return;}
+      if(titleShownOnScreen(p,sid))out.push({p,mirror:true});
+    });
+  });
+  return out;
+}
+const TITLE_STYLES={
+  solid:'',outline:'',glass:'',gradient:'',plain:'',elevated:'',
+};
+function titleInnerHtml(p){
+  const t=p.size||18;
+  const icon=p.icon?`<span class="title-ico">${p.icon}</span>`:'';
+  const sub=(p.sub!=null&&String(p.sub).length)?`<small class="title-sub">${esc(p.sub)}</small>`:'';
+  const align=p.align||'left';
+  return `<div class="title-inner" style="text-align:${align};justify-content:${align==='center'?'center':align==='right'?'flex-end':'flex-start'};">
+    ${icon}<span class="title-main" style="font-size:${t}px;">${esc(p.text||'页面标题')}</span>${sub}
+  </div>`;
+}
+/* 生成标题元素（编辑态 / 预览态） */
+function renderTitleEl(p,mirror,isEdit){
+  const pri=p.color||S.color||'#6750A4';
+  const el=document.createElement('div');
+  el.className='m3title m3title-'+(p.style||'solid')+(isEdit?' m3title-edit':'');
+  el.setAttribute('data-title-mirror',p.id);
+  el.setAttribute('data-navbar-fixed','1');
+  el.setAttribute('data-title',p.id);
+  el.style.cssText=`position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;--title-pri:${pri};`;
+  el.innerHTML=titleInnerHtml(p);
+  if(S.preview)el.style.pointerEvents='auto';
+  else el.style.pointerEvents=isEdit?'auto':'none';
+  return el;
+}
+/* 渲染固定标题层（并入固定层，切屏时同样固定不动） */
+function renderFixedTitles(){
+  const canvas=document.getElementById('canvas');
+  if(!canvas)return;
+  const s=scr();if(!s)return;
+  let layer=canvas.querySelector('.m3title-fixed-layer');
+  if(S.editingPage){ if(layer)layer.remove(); return; }
+  if(!layer){
+    layer=document.createElement('div');
+    layer.className='m3title-fixed-layer';
+    canvas.appendChild(layer);
+  }
+  const all=titlesForScreen(S.cur);
+  const keep=new Set();
+  all.forEach(({p,mirror})=>{
+    keep.add(p.id);
+    const isHome=(!mirror)&&(S.cur===titleHomeScreen(p))&&!S.preview;
+    let el=layer.querySelector(`.m3title[data-title-mirror="${p.id}"]`);
+    if(!el){ el=renderTitleEl(p,mirror,isHome); layer.appendChild(el); }
+    else{
+      el.className='m3title m3title-'+(p.style||'solid')+(isHome?' m3title-edit':'');
+      el.innerHTML=titleInnerHtml(p);
+      el.style.cssText=`position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;--title-pri:${p.color||S.color||'#6750A4'};`;
+      el.style.pointerEvents=S.preview?'auto':(isHome?'auto':'none');
+    }
+    if(isHome)bindFixedTitle(el,p);
+  });
+  layer.querySelectorAll('.m3title').forEach(el=>{
+    if(!keep.has(el.getAttribute('data-title-mirror')))el.remove();
+  });
+}
+/* 固定标题的选中/拖动/长按 */
+function bindFixedTitle(el,p){
+  if(el._boundTitle)return; el._boundTitle=true;
+  const start=(ev)=>{
+    if(S.preview||S.linkMode)return;
+    ev.stopPropagation();
+    selectPart(p.id);
+    const t=ev.touches?ev.touches[0]:ev;
+    const sx=t.clientX,sy=t.clientY,ox=p.x,oy=p.y;
+    let moved=false;
+    const longT=setTimeout(()=>{ if(!moved){if(navigator.vibrate)navigator.vibrate(15);openCtx(p.id);cleanup();} },520);
+    const mv=(e)=>{
+      const tt=e.touches?e.touches[0]:e;
+      const dx=tt.clientX-sx,dy=tt.clientY-sy;
+      if(!moved&&Math.abs(dx)+Math.abs(dy)>4){moved=true;clearTimeout(longT);}
+      if(!moved)return;
+      const sz=getCanvasSize();
+      p.x=Math.max(0,Math.min(sz.w-p.w,Math.round(ox+dx)));
+      p.y=Math.max(0,Math.min(sz.h-p.h,Math.round(oy+dy)));
+      el.style.left=p.x+'px';el.style.top=p.y+'px';
+      e.preventDefault();
+    };
+    const up=()=>{ clearTimeout(longT); if(moved){saveHist();persist();} cleanup(); };
+    const cleanup=()=>{
+      document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);
+      document.removeEventListener('touchmove',mv);document.removeEventListener('touchend',up);
+    };
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+    document.addEventListener('touchmove',mv,{passive:false});document.addEventListener('touchend',up);
+  };
+  el.addEventListener('touchstart',start,{passive:false});
+  el.addEventListener('mousedown',start);
+}
+/* 标题属性面板 */
+function openTitleProps(){
+  if(S.preview)return;
+  const s=scr();if(!s)return;
+  let p=(s.parts||[]).find(x=>x.id===S.sel&&x.type==='title');
+  if(!p)p=(s.parts||[]).find(x=>x.type==='title');
+  if(!p)return;
+  S.titleEditId=p.id;
+  document.getElementById('propTitle').textContent='标题';
+  let h='';
+  h+=`<div class="fg"><label>文字内容</label><input type="text" value="${esc(p.text||'')}" oninput="titleSet('text',this.value)"></div>`;
+  h+=`<div class="fg"><label>副标题（可留空）</label><input type="text" value="${esc(p.sub||'')}" placeholder="不添加则留空" oninput="titleSet('sub',this.value)"></div>`;
+  h+=`<div class="fg"><label>左侧图标（可留空）</label><input type="text" value="${esc(p.icon||'')}" placeholder="如 ★ / ⌂" oninput="titleSet('icon',this.value)"></div>`;
+  const styles=[['solid','实心'],['outline','描边'],['glass','玻璃'],['gradient','渐变'],['elevated','悬浮'],['plain','无底']];
+  h+=`<div class="fg"><label>样式</label><div class="mat-row" style="flex-wrap:wrap;">
+    ${styles.map(([v,n])=>`<button class="mbtn ${(p.style||'solid')===v?'on':''}" style="min-width:60px;" onclick="titleSet('style','${v}')">${n}</button>`).join('')}
+  </div></div>`;
+  h+=`<div class="fg"><label>主色（留空跟随主题）</label>
+    <div class="color-row"><div class="color-cell"><span>标题主色</span>
+      <input type="color" value="${p.color||S.color||'#6750A4'}" oninput="titleSet('color',this.value)">
+      ${p.color?`<button class="clr-clear" onclick="titleSet('color','')">✕</button>`:''}
+    </div></div></div>`;
+  h+=`<div class="fg"><label>文字对齐</label><div class="mat-row">
+    <button class="mbtn ${(!p.align||p.align==='left')?'on':''}" onclick="titleSet('align','left')">左</button>
+    <button class="mbtn ${p.align==='center'?'on':''}" onclick="titleSet('align','center')">中</button>
+    <button class="mbtn ${p.align==='right'?'on':''}" onclick="titleSet('align','right')">右</button>
+  </div></div>`;
+  h+=`<div class="fg"><label>字号：<b id="titleSizeLabel">${p.size||18}px</b></label>
+    <input type="range" min="10" max="40" step="1" value="${p.size||18}"
+      oninput="titleSet('size',+this.value);const l=document.getElementById('titleSizeLabel');if(l)l.textContent=this.value+'px';"></div>`;
+  h+=`<div class="fg"><label>位置 / 尺寸</label>
+    <div class="mat-row" style="flex-wrap:wrap;gap:8px;">
+      <label style="font-size:12px;">X <input type="number" value="${Math.round(p.x)}" style="width:60px;" oninput="titleGeom('x',this.value)"></label>
+      <label style="font-size:12px;">Y <input type="number" value="${Math.round(p.y)}" style="width:60px;" oninput="titleGeom('y',this.value)"></label>
+      <label style="font-size:12px;">宽 <input type="number" value="${Math.round(p.w)}" min="60" style="width:60px;" oninput="titleGeom('w',this.value)"></label>
+      <label style="font-size:12px;">高 <input type="number" value="${Math.round(p.h)}" min="30" style="width:60px;" oninput="titleGeom('h',this.value)"></label>
+    </div></div>`;
+  h+=`<div class="fg"><label>吸顶</label><div class="mat-row">
+    <button class="mbtn" style="flex:1;" onclick="titleSnapTop()">⬆ 贴到屏幕顶部</button>
+  </div></div>`;
+  // 显示屏幕多选
+  const home=titleHomeScreen(p);
+  h+=`<div class="fg"><label>同步显示到其它屏幕（不选=全部）</label><div class="screen-chk">`;
+  S.screens.forEach(s2=>{
+    const isHome=(s2.id===home);
+    const on=isHome||(p.screens||[]).includes(s2.id);
+    h+=`<button class="mbtn ${on?'on':''}" style="justify-content:flex-start;"
+      ${isHome?'disabled':`onclick="titleToggleScreen('${s2.id}')"`}>
+      ${on?'☑':'☐'} ${esc(s2.name)}${isHome?'（本屏）':''}</button>`;
+  });
+  h+=`</div></div>`;
+  h+=`<div class="acts"><button class="bcancel" onclick="closeAllPanels()">完成</button></div>`;
+  document.getElementById('propBody').innerHTML=h;
+  openSheet('propSheet');
+}
+function titleEditingPart(){
+  const s=scr();if(!s)return null;
+  return (s.parts||[]).find(x=>x.id===S.titleEditId)||(s.parts||[]).find(x=>x.type==='title')||null;
+}
+function titleSet(k,v){
+  const p=titleEditingPart();if(!p)return;
+  p[k]=v;persist();renderCanvas();openTitleProps();
+}
+function titleGeom(k,v){
+  const p=titleEditingPart();if(!p)return;
+  p[k]=Math.max(0,+v||0);persist();renderCanvas();openTitleProps();
+}
+function titleSnapTop(){
+  const p=titleEditingPart();if(!p)return;
+  p.y=0;persist();renderCanvas();openTitleProps();
+}
+function titleToggleScreen(sid){
+  const p=titleEditingPart();if(!p)return;
+  const arr=p.screens||(p.screens=[]);
+  const i=arr.indexOf(sid);
+  if(i>=0)arr.splice(i,1);else arr.push(sid);
+  persist();renderCanvas();openTitleProps();
+}
+
+/* ================= 滚动页面（单页纵向滚动容器） ================= */
+function defaultScrollPage(){
+  return {
+    style:'plain',          // plain / card / outlined
+    color:'',               // 背景色，空=默认
+    contentH:900,           // 内容总高度（可一直向下延伸）
+    scrollY:0,              // 预览时滚动位置
+    parts:[],
+    locked:false,hidden:false,
+  };
+}
+function makeScrollPagePart(){
+  const sz=getCanvasSize();
+  const w=Math.min(sz.w-20,320),h=Math.min(sz.h-80,420);
+  return Object.assign({
+    id:uid(),type:'scrollpage',
+    x:Math.round((sz.w-w)/2),y:60,w,h,
+  },defaultScrollPage());
+}
+/* 滚动页面的内部组件容器（复用 editingPage 机制） */
+function getScrollParts(p){
+  if(!p.parts)p.parts=[];
+  return p.parts;
+}
+/* 滚动页面属性面板 */
+function openScrollPageProps(id){
+  if(S.preview)return;
+  const s=scr();if(!s)return;
+  let p=(id&&byId(id))||(s.parts||[]).find(x=>x.id===S.sel&&x.type==='scrollpage')||(s.parts||[]).find(x=>x.type==='scrollpage');
+  if(!p)return;
+  S.spEditId=p.id;
+  document.getElementById('propTitle').textContent='滚动页面';
+  let h='';
+  const styles=[['plain','无底'],['card','卡片'],['outlined','描边']];
+  h+=`<div class="fg"><label>样式</label><div class="mat-row">
+    ${styles.map(([v,n])=>`<button class="mbtn ${(p.style||'plain')===v?'on':''}" onclick="spSet('style','${v}')">${n}</button>`).join('')}
+  </div></div>`;
+  h+=`<div class="fg"><label>背景色（留空默认）</label><div class="color-row"><div class="color-cell">
+    <span>背景</span><input type="color" value="${p.color||'#FFFFFF'}" oninput="spSet('color',this.value)">
+    ${p.color?`<button class="clr-clear" onclick="spSet('color','')">✕</button>`:''}
+  </div></div></div>`;
+  h+=`<div class="fg"><label>内容高度：<b id="spHLabel">${p.contentH||900}px</b></label>
+    <input type="range" min="200" max="4000" step="20" value="${p.contentH||900}"
+      oninput="spSet('contentH',+this.value);const l=document.getElementById('spHLabel');if(l)l.textContent=this.value+'px';">
+    <div style="font-size:11px;color:var(--on-sur-v);margin-top:4px;">内容区总高度，可一直向下延伸</div></div>`;
+  h+=`<div class="fg"><label>位置 / 尺寸</label>
+    <div class="mat-row" style="flex-wrap:wrap;gap:8px;">
+      <label style="font-size:12px;">X <input type="number" value="${Math.round(p.x)}" style="width:60px;" oninput="spGeom('x',this.value)"></label>
+      <label style="font-size:12px;">Y <input type="number" value="${Math.round(p.y)}" style="width:60px;" oninput="spGeom('y',this.value)"></label>
+      <label style="font-size:12px;">宽 <input type="number" value="${Math.round(p.w)}" min="80" style="width:60px;" oninput="spGeom('w',this.value)"></label>
+      <label style="font-size:12px;">高 <input type="number" value="${Math.round(p.h)}" min="80" style="width:60px;" oninput="spGeom('h',this.value)"></label>
+    </div></div>`;
+  h+=`<div class="fg"><label>内容（${(p.parts||[]).length} 个组件）</label>
+    <button class="mbtn" style="width:100%;" onclick="closeAllPanels();enterScrollEdit('${p.id}')">🧩 进入内容编辑</button></div>`;
+  h+=`<div class="acts"><button class="bcancel" onclick="closeAllPanels()">完成</button></div>`;
+  document.getElementById('propBody').innerHTML=h;
+  openSheet('propSheet');
+}
+function spEditingPart(){
+  const s=scr();if(!s)return null;
+  return (s.parts||[]).find(x=>x.id===S.spEditId)||(s.parts||[]).find(x=>x.type==='scrollpage')||null;
+}
+function spSet(k,v){
+  const p=spEditingPart();if(!p)return;
+  p[k]=v;persist();renderCanvas();openScrollPageProps(p.id);
+}
+function spGeom(k,v){
+  const p=spEditingPart();if(!p)return;
+  p[k]=Math.max(0,+v||0);persist();renderCanvas();openScrollPageProps(p.id);
+}
+
+
 const TYPES=[
   {t:'button',i:'🔘',n:'按钮',w:110,h:44,g:'按钮',d:{text:'按钮',toggle:false,on:false}},
   {t:'icon-btn',i:'⭕',n:'图标按钮',w:48,h:48,g:'按钮',d:{icon:'★'}},
@@ -1481,6 +1813,8 @@ const TYPES=[
   {t:'tabbar',i:'📑',n:'标签页',w:280,h:44,g:'导航',d:{segments:['全部','进行中','已完成'],segIdx:0,navLinks:[]}},
   {t:'bottom-nav',i:'⬓',n:'底部导航',w:340,h:72,g:'导航',d:{items:[['🏠','首页'],['🔍','发现'],['👤','我的']],segIdx:0,navLinks:[]}},
   {t:'navbar',i:'🧭',n:'滑动导航栏',g:'导航',special:'navbar',d:{}},
+  {t:'title',i:'🏷️',n:'标题',g:'导航',special:'title',d:{}},
+  {t:'scrollpage',i:'📜',n:'滚动页面',w:320,h:420,g:'媒体',special:'scrollpage',d:{}},
   {t:'container',i:'▢',n:'容器',w:240,h:140,g:'容器',d:{}},
   {t:'timeline',i:'⏱️',n:'时间线',w:260,h:150,g:'容器',d:{items:[['标题 1','描述'],['标题 2','描述'],['标题 3','描述']]}},
   {t:'dialog',i:'💬',n:'对话框',w:280,h:170,g:'容器',d:{text:'对话框标题',sub:'这里是对话框的内容说明文字。'}},
@@ -1555,8 +1889,12 @@ function getEditParts(){
       if(!it.parts)it.parts=[];
       return it.parts;
     }
+    if(owner.type==='scrollpage'){
+      if(!owner.parts)owner.parts=[];
+      return owner.parts;
+    }
     return null;
-  }
+}
   const s=scr();
   return s?s.parts:null;
 }
@@ -1587,6 +1925,15 @@ function enterFoldEdit(foldId,itemIdx){
 }
 function exitPageEdit(){
   S.editingPage=null;
+  S.sel=null;
+  closeAllPanels();
+  renderAll();
+}
+/* 进入滚动页面的"内容编辑"（可往里面放任意组件，内容可一直向下延伸） */
+function enterScrollEdit(spId){
+  if(S.preview)return;
+  if(S.linkMode){alert('请先退出连线模式');return;}
+  S.editingPage={pagerId:spId};
   S.sel=null;
   closeAllPanels();
   renderAll();
@@ -1847,6 +2194,10 @@ function updateTitleBar(){
       label=`📂 ${it?.title||'列表项'}`;
       info.textContent=`${label} · ${(it?.parts||[]).length} 个组件`;
       document.getElementById('title').textContent=`${it?.title||'列表项'}`;
+    }else if(owner&&owner.type==='scrollpage'){
+      label=`📜 ${owner.text||'滚动页面'}`;
+      info.textContent=`${label} · ${(owner.parts||[]).length} 个组件`;
+      document.getElementById('title').textContent=`${owner.text||'滚动页面'}`;
     }else{
       const pg=(owner?.pages||[])[S.editingPage.pageIdx];
       label=`📄 ${pg?.name||'页面'}`;
@@ -1883,6 +2234,8 @@ function renderCanvas(){
     if(owner&&owner.type==='fold-list'){
       const it=(owner.items||[])[S.editingPage.itemIdx];
       el.style.background=it?.color||'';
+    }else if(owner&&owner.type==='scrollpage'){
+      el.style.background='';
     }else{
       const pg=(owner?.pages||[])[S.editingPage.pageIdx];
       if(pg&&pg.color){el.style.background=pg.color;}
@@ -1893,25 +2246,25 @@ function renderCanvas(){
     el.style.background='';
     html=s.parts.map(p=>renderPart(p,PV)).join('');
   }
-  // 屏幕内容放进独立图层（切屏动画只作用于它，导航栏固定不动）
-  // 导航栏组件从内容层剥离，单独放到固定层，切屏时不受影响
+  // 屏幕内容放进独立图层（切屏动画只作用于它）
+  // 导航栏 / 标题从内容层剥离，放到固定层，切屏时不受影响
   const navParts=[];
   let contentHtml='';
   if(S.editingPage){
     contentHtml=html;
   }else{
-    const rendered=s.parts.map(p=>{
+    contentHtml=s.parts.map(p=>{
       if(p.type==='navbar'){navParts.push(p);return '';}
+      if(p.type==='title'){return '';}
       return renderPart(p,PV);
     }).join('');
-    contentHtml=rendered;
   }
   el.innerHTML=`<div class="screen-layer" id="screenLayer">${contentHtml}</div>`;
   el.appendChild(svg);
   el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);
   renderFixedNavbars(navParts);
+  renderFixedTitles();
   bindParts();bindCarousels();updateFloatBar();updateLinkLayer();
-  renderNavMirrors();
 }
 /* 固定导航栏层：本屏归属的导航栏 + 从其它屏镜像来的导航栏，都放这里
    切屏动画只作用于 .screen-layer，这一层不受影响（导航栏固定不动） */
@@ -2200,6 +2553,24 @@ function renderPart(p,PV){
       const cover=imgContent({imgMode:d.imgMode,emoji:d.emoji,url:d.url,data:d.data});
       return `<div class="${cls('video')}" data-id="${p.id}" style="${st}border-radius:${R(12)}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#666;font-size:36px;background:linear-gradient(135deg,#1a1a2e,#16213e);">${cover}</div><div class="play">▶</div><div class="bar"><div class="f"></div></div><div style="position:absolute;top:8px;left:10px;font-size:11px;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:8px;">${esc(d.text||'视频')}</div></div>`;
     }
+    case 'scrollpage':{
+      const isEditing=!PV&&S.editingPage&&S.editingPage.pagerId===p.id;
+      const inner=(d.parts||[]);
+      const emptyHint=(!PV&&!isEditing&&inner.length===0)?
+        `<div class="sp-empty"><span class="big">📜</span><span>滚动页面</span><span style="font-size:10px;opacity:.6;">双击进入编辑，可一直向下添加</span></div>`:'';
+      const bg=d.color?`background:${d.color};`:'';
+      const dblAttr=PV?'':`ondblclick="enterScrollEdit('${p.id}')"`;
+      const contentH=Math.max(d.contentH||400,p.h);
+      return `<div class="${cls('scrollpage sp-'+(d.style||'plain'))}" data-id="${p.id}"
+        data-scrollpage="1" style="${st}border-radius:${R(12)}" ${dblAttr}>
+        <div class="sp-scroll" style="${bg}">
+          <div class="sp-content" style="height:${contentH}px;">
+            ${emptyHint}
+            ${inner.map(sp=>renderSubPart(sp,PV)).join('')}
+          </div>
+        </div>
+      </div>`;
+    }
     case 'appbar':return `<div class="${cls('appbar')}" data-id="${p.id}" style="${st}"><span class="l">${d.icon||'←'}</span><span class="m" ${f('text')}>${esc(d.text||'页面标题')}</span><span class="r">⋮</span></div>`;
     case 'tabbar':return `<div class="${cls('tabbar')}" data-id="${p.id}" style="${st}">${(d.segments||[]).map((s,i)=>`<div class="${i===d.segIdx?'on':''}" ${PV?`onclick="pvSeg(event,'${p.id}',${i})"`:''}>${esc(s)}</div>`).join('')}</div>`;
     case 'bottom-nav':return `<div class="${cls('bnav')}" data-id="${p.id}" style="${st}">${(d.items||[]).map((it,i)=>`<div class="${i===d.segIdx?'on':''}" ${PV?`onclick="pvSeg(event,'${p.id}',${i})"`:''}><span class="bi">${it[0]}</span><span>${esc(it[1])}</span></div>`).join('')}</div>`;
@@ -2404,13 +2775,16 @@ function renderLayers(){
     if(owner&&owner.type==='fold-list'){
       const it=(owner.items||[])[S.editingPage.itemIdx];
       parts=it?.parts||[];name=it?.title||'列表项';
+    }else if(owner&&owner.type==='scrollpage'){
+      parts=owner.parts||[];name=(owner.text||'滚动页面');
     }else{
       const pg=(owner?.pages||[])[S.editingPage.pageIdx];
       parts=pg?.parts||[];name=pg?.name||'页面';
     }
     title.textContent=`图层 · ${name}`;
     if(!parts.length){
-      el.innerHTML=`<div class="sb-empty">此${owner?.type==='fold-list'?'列表项':'页面'}还没有组件<br><br>点右下角 ＋ 添加</div>`;
+      const what=(owner?.type==='fold-list')?'列表项':(owner?.type==='scrollpage')?'滚动页面':'页面';
+      el.innerHTML=`<div class="sb-empty">此${what}还没有组件<br><br>点右下角 ＋ 添加</div>`;
       return;
     }
     el.innerHTML=[...parts].reverse().map(p=>{
@@ -2421,7 +2795,7 @@ function renderLayers(){
         <span class="lname">${esc(label)}</span>
         <button class="lbtn" onclick="event.stopPropagation();moveLayerUp('${p.id}')">↑</button>
         <button class="lbtn" onclick="event.stopPropagation();moveLayerDown('${p.id}')">↓</button>
-        <button class="lbtn ${p.locked?'on':''}" onclick="event.stopPropagation();toggleLock('${p.id}')">${p.locked?'🔒':'🔓'}</button>
+        <button class="lbtn ${p.locked?'on':''}" onclick="event.stopPropagation();toggleLock('${p.id}')\">${p.locked?'🔒':'🔓'}</button>
       </div>`;
     }).join('');
     return;
@@ -2432,16 +2806,17 @@ function renderLayers(){
     const ti=TYPES.find(x=>x.t===p.type)||{i:'□',n:p.type};
     const label=p.text||p.icon||ti.n;
     const isPV=p.type==='pageview';
-    const expanded=isPV&&S.layerExpanded.has(p.id);
+    const isSP=p.type==='scrollpage';
+    const expanded=(isPV||isSP)&&S.layerExpanded.has(p.id);
     let h=`<div class="litem ${p.id===S.sel?'on':''}" onclick="selectPart('${p.id}')">
       <span class="li2">${ti.i}</span>
       <span class="lname">${esc(label)}</span>
-      ${isPV?`<button class="lbtn" style="color:${expanded?'var(--pri)':''};font-weight:700;" onclick="event.stopPropagation();toggleLayerExpand('${p.id}')">${expanded?'▾':'▸'}</button>`:''}
+      ${(isPV||isSP)?`<button class="lbtn" style="color:${expanded?'var(--pri)':''};font-weight:700;" onclick="event.stopPropagation();toggleLayerExpand('${p.id}')">${expanded?'▾':'▸'}</button>`:''}
       <button class="lbtn" onclick="event.stopPropagation();moveLayerUp('${p.id}')">↑</button>
       <button class="lbtn" onclick="event.stopPropagation();moveLayerDown('${p.id}')">↓</button>
-      <button class="lbtn ${p.locked?'on':''}" onclick="event.stopPropagation();toggleLock('${p.id}')">${p.locked?'🔒':'🔓'}</button>
+      <button class="lbtn ${p.locked?'on':''}" onclick="event.stopPropagation();toggleLock('${p.id}')\">${p.locked?'🔒':'🔓'}</button>
     </div>`;
-    if(expanded){
+    if(expanded&&isPV){
       h+=`<div class="lsub">`+(p.pages||[]).map((pg,i)=>
         `<div class="lsub-item ${p.cur===i?'on':''}" onclick="enterPageEdit('${p.id}',${i})">
           <span class="lnum">#${i+1}</span>
@@ -2449,6 +2824,13 @@ function renderLayers(){
           <span class="lcount">${(pg.parts||[]).length} 组件</span>
         </div>`
       ).join('')+`</div>`;
+    }
+    if(expanded&&isSP){
+      h+=`<div class="lsub"><div class="lsub-item" onclick="enterScrollEdit('${p.id}')">
+        <span class="lnum">📜</span>
+        <span style="flex:1;">进入内容编辑</span>
+        <span class="lcount">${(p.parts||[]).length} 组件</span>
+      </div></div>`;
     }
     return h;
   }).join('');
@@ -3105,6 +3487,7 @@ const PREVIEW_INTERACTIVE_SEL=[
   '.sw','.chk','.rad','.chip','.sldr','.rate',
   '.bnav','.tabbar','.seg','.fl-head',
   '.carousel .nav','.carousel .dot',
+  '.sp-scroll',
   'input,textarea'
 ].join(',');
 
@@ -3410,6 +3793,9 @@ function selectPart(id){
   // 固定层导航栏的选中态
   document.querySelectorAll('.m3nav-fixed-layer [data-navbar-id]').forEach(el=>
     el.classList.toggle('sel',el.getAttribute('data-navbar-id')===id));
+  // 固定层标题的选中态
+  document.querySelectorAll('.m3title-fixed-layer .m3title').forEach(el=>
+    el.classList.toggle('sel',el.getAttribute('data-title-mirror')===id));
   if(S.editingPage){
     const pager=byId(S.editingPage.pagerId);
     if(pager)pager.sel=S.sel;
@@ -3595,6 +3981,28 @@ function addPart(type){
     setTimeout(()=>openNavbarProps(),60);
     return;
   }
+  // 标题：作为可多屏同步的顶部组件加入
+  if(info&&info.special==='title'){
+    const parts=getEditParts();
+    if(!parts){alert('请先选择要添加的位置');return;}
+    const p=makeTitlePart();
+    parts.push(p);
+    S.sel=p.id;
+    saveHist();renderAll();persist();
+    setTimeout(()=>openTitleProps(),60);
+    return;
+  }
+  // 滚动页面：单页可纵向滚动的容器（可编辑内部组件）
+  if(info&&info.special==='scrollpage'){
+    const parts=getEditParts();
+    if(!parts){alert('请先选择要添加的位置');return;}
+    const p=makeScrollPagePart();
+    parts.push(p);
+    S.sel=p.id;
+    saveHist();renderAll();persist();
+    setTimeout(()=>openScrollPageProps(),60);
+    return;
+  }
   const parts=getEditParts();if(!parts)return;
   if(!info)return;
   const sz=getCanvasSize();
@@ -3692,6 +4100,10 @@ function openProp(id){
   S.sel=id;
   // 滑动导航栏：走专用设置面板
   if(p.type==='navbar'){ S.navEditId=id; openNavbarProps(); return; }
+  // 标题：走专用设置面板
+  if(p.type==='title'){ S.titleEditId=id; openTitleProps(); return; }
+  // 滚动页面：走专用设置面板
+  if(p.type==='scrollpage'){ openScrollPageProps(id); return; }
   if(S.editingPage){
     const pager=byId(S.editingPage.pagerId);
     if(pager)pager.sel=id;
