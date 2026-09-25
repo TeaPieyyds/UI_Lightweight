@@ -1247,6 +1247,7 @@ const S={
   resources:[],zoom:1,darkPreview:false,
   layerExpanded:new Set(),
   editingPage:null,
+  inlineEditing:null,
   connections:[],
   linkMode:false,
   pendingLink:null,
@@ -2269,6 +2270,17 @@ function renderTabs(){
     `<button class="tab add" onclick="addScr()">＋</button>`;
 }
 function renderCanvas(){
+  // 若正在内联编辑：先提交并退出编辑，避免重建把输入框销毁（防止输入法被顶掉）
+  if(S.inlineEditing){
+    const ed=S.inlineEditing;S.inlineEditing=null;
+    if(ed.el&&ed.el.getAttribute('contenteditable')==='true'){
+      ed.el.removeAttribute('contenteditable');
+      const parts=getEditParts()||[];
+      const p=parts.find(x=>x.id===ed.id);
+      const f=ed.el.dataset.field;
+      if(p&&f){const t=ed.el.textContent.trim();if(t!==(p[f]||'')){p[f]=t;saveHist();}}
+    }
+  }
   const s=scr();S.sel=s?.sel||null;
   const el=document.getElementById('canvas');
   const svg=document.getElementById('linkLayer');
@@ -3586,6 +3598,7 @@ function onTS(e){
     return;
   }
   if(e.target.isContentEditable)return;
+  if(S.inlineEditing)return;   // 内联编辑中：不触发拖动/选中
   if(e.target.closest('.nav,.dot,.fl-head'))return;
   // 滚动页面内部：允许原生纵向滚动，不触发组件拖动（内部子组件仍可拖动）
   if(e.target.closest('.sp-scroll')&&!e.target.closest('.part[data-scrollpage] .part')){
@@ -3634,6 +3647,7 @@ function onMD(e){
     return;
   }
   if(e.target.isContentEditable)return;
+  if(S.inlineEditing)return;   // 内联编辑中：不触发拖动/选中
   if(e.target.closest('.nav,.dot,.fl-head'))return;
   // 滚动页面内部：允许原生纵向滚动，不触发组件拖动（内部子组件仍可拖动）
   if(e.target.closest('.sp-scroll')&&!e.target.closest('.part[data-scrollpage] .part')){
@@ -3737,11 +3751,14 @@ function startInlineEdit(id,targetEl){
   if(!fieldEl){openProp(id);return;}
   drag.on=false;clearTimeout(drag.longT);drag.moved=false;
   const field=fieldEl.dataset.field,origText=p[field]||'';
+  S.inlineEditing={id,el:fieldEl};
   fieldEl.setAttribute('contenteditable','true');fieldEl.focus();
+  // 把光标/选区放到文字末尾并全选，方便直接改写
   const range=document.createRange();range.selectNodeContents(fieldEl);
   const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
   const finish=()=>{
     if(fieldEl.getAttribute('contenteditable')!=='true')return;
+    S.inlineEditing=null;
     fieldEl.removeAttribute('contenteditable');
     const newText=fieldEl.textContent.trim();
     if(newText!==origText){p[field]=newText;saveHist();}
@@ -3752,7 +3769,10 @@ function startInlineEdit(id,targetEl){
     if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();fieldEl.blur();}
     if(ev.key==='Escape'){ev.preventDefault();fieldEl.textContent=origText;fieldEl.blur();}
   });
-  fieldEl.addEventListener('touchstart',ev=>ev.stopPropagation(),{passive:true,once:true});
+  // 编辑期间：不让画布拖动/选中逻辑干扰输入
+  fieldEl.addEventListener('touchstart',ev=>ev.stopPropagation(),{passive:true});
+  fieldEl.addEventListener('mousedown',ev=>ev.stopPropagation());
+  fieldEl.addEventListener('click',ev=>ev.stopPropagation());
 }
 
 function clearAllSelection(){
@@ -4654,6 +4674,7 @@ function upProp(k,v){
   saveHist();
 }
 function updatePartEl(p,opts){
+  if(S.inlineEditing&&S.inlineEditing.id===p.id)return;   // 正在内联编辑，勿重建
   const oldEl=document.querySelector(`.part[data-id="${p.id}"]`);
   if(!oldEl){renderCanvas();return;}
   const wasSel=oldEl.classList.contains('sel');
@@ -4740,6 +4761,7 @@ function applyFont(v,silent){
 
 document.addEventListener('touchstart',e=>{
   if(S.preview||S.multiMode||S.linkMode)return;
+  if(S.inlineEditing)return;
   if(e.target.closest('.sidebar,.right-panel,.sheet,.multibar,.zoom-ctrl,.fab,.page-edit-bar,.modal,.ctxmenu,.topbar,.tabs,.bottombar,.floatbar,.layers,.stage,.link-tip'))return;
   if(S.sel){
     S.sel=null;
@@ -4755,6 +4777,7 @@ document.addEventListener('touchstart',e=>{
 },true);
 document.addEventListener('touchstart',e=>{
   if(S.preview||S.multiMode||S.linkMode)return;
+  if(S.inlineEditing)return;
   if(!e.target.closest('.stage'))return;
   if(e.target.closest('.part,.multibar,.zoom-ctrl,.fab,.page-edit-bar,.floatbar,.canvas,.link-tip'))return;
   if(S.sel){
@@ -4774,6 +4797,7 @@ document.addEventListener('touchstart',e=>{
 let canvasLongT=null;
 document.addEventListener('touchstart',e=>{
   if(S.preview||S.linkMode)return;
+  if(S.inlineEditing)return;
   if(!e.target.closest('.stage'))return;
   if(e.target.closest('.part,.sidebar,.sheet,.multibar,.zoom-ctrl,.fab,.page-edit-bar,.floatbar,.layers,.ctxmenu,.topbar,.tabs,.bottombar,.link-tip'))return;
   if(!(S.clipMulti&&S.clipMulti.length))return;
