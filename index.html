@@ -390,7 +390,9 @@ body.preview .part.locked::after{display:none;}
 .rate .s.on{color:#F5A623;}
 .rate .s:active{transform:scale(1.2);}
 .card{padding:14px;border-radius:var(--r-md);background:var(--sur-v);
-  font-size:14px;flex-direction:column;align-items:flex-start;}
+  font-size:14px;flex-direction:column;align-items:stretch;}
+.card .card-inner{width:100%;height:100%;display:flex;flex-direction:column;
+  align-items:flex-start;justify-content:flex-start;gap:0;}
 .card .card-sub{font-size:11px;color:#9A9A9A;
   margin-top:4px;line-height:1.35;font-weight:400;display:block;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;}
@@ -825,12 +827,19 @@ body.preview .preview-tip{display:block;}
   pointer-events:none;display:flex;justify-content:center;
   padding:0 12px calc(12px + env(safe-area-inset-bottom));
   transition:transform .3s cubic-bezier(.2,0,0,1);}
-/* 作为画布组件 / 镜像时：填满所属容器盒子，去掉全局停靠的内边距 */
+/* 导航栏本体/内盒/按钮统一颜色过渡，让主色变化也有动画 */
+.m3nav-inner,.m3nav-item,.m3nav-lbl,.m3nav-ico{transition:background .3s ease,color .3s ease,border-color .3s ease,transform .3s cubic-bezier(.34,1.56,.64,1);}
+/* 作为画布组件 / 镜像 / 固定层时：填满所属容器盒子，去掉全局停靠的内边距 */
 .navbar-part > .m3nav,
-.m3nav-mirror{left:0;right:0;top:0;bottom:0;padding:0;
+.m3nav-mirror,
+.m3nav-fixed-layer > .m3nav{left:0;right:0;top:0;bottom:0;padding:0;
   align-items:center;justify-content:center;}
 .navbar-part{position:absolute;}
-.navbar-part > .m3nav > .m3nav-inner{width:100%;height:100%;}
+.navbar-part > .m3nav > .m3nav-inner,
+.m3nav-fixed-layer > .m3nav > .m3nav-inner,
+.m3nav-mirror > .m3nav-inner{width:100%;height:100%;}
+/* 固定层导航栏内盒子：让胶囊有正确的定位参照 */
+.m3nav-fixed-layer > .m3nav > .m3nav-inner{position:relative;}
 .m3nav-mirror-layer{position:absolute;inset:0;pointer-events:none;z-index:648;}
 .m3nav-mirror-layer .m3nav-mirror{position:absolute;pointer-events:none;}
 .m3nav .m3nav-inner{position:relative;pointer-events:auto;
@@ -1272,12 +1281,19 @@ function navGo(e,id,i){
   if(e)e.stopPropagation();
   const p=byIdAny(id);if(!p)return;
   const it=(p.items||[])[i];if(!it)return;
+  const prev=p.cur||0;
   p.cur=i;persist();
+  // 原地更新胶囊滑动 + 按钮激活态（带过渡，不重建导航层）
+  renderFixedNavbarsNow();
   if(it.screenId&&S.screens.some(s=>s.id===it.screenId)){
     slideToScreen(it.screenId,it.anim||'slide-left');
-  }else{
-    renderCanvas();
   }
+}
+/* 触发一次固定导航层的原地刷新（保留胶囊 transition） */
+function renderFixedNavbarsNow(){
+  const s=scr();if(!s)return;
+  const navParts=(s.parts||[]).filter(x=>x.type==='navbar');
+  renderFixedNavbars(navParts);
 }
 /* ---------- 导航栏设置面板（作用于选中的 navbar 组件） ---------- */
 /* 打开导航栏设置：优先用当前选中的，否则用本屏的导航栏 */
@@ -1432,7 +1448,7 @@ const TYPES=[
   {t:'radio',i:'🔵',n:'单选框',w:120,h:32,g:'输入',d:{text:'选项',on:true}},
   {t:'switch',i:'🔀',n:'开关',w:52,h:32,g:'输入',d:{on:true}},
   {t:'slider',i:'🎚️',n:'滑块',w:200,h:24,g:'输入',d:{value:60}},
-  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容',sub:'',cardStyle:'elevated',bgColor:'',fgColor:'',radius:null,borderColor:'',shadow:null}},
+  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容',sub:'',cardStyle:'elevated',textSize:14,textAlign:'left',textVAlign:'top',bgColor:'',fgColor:'',radius:null,borderColor:'',shadow:null}},
   {t:'list-item',i:'📋',n:'列表项',w:300,h:56,g:'展示',d:{text:'列表标题',sub:'副标题文字',icon:'📁'}},
   {t:'fold-list',i:'📂',n:'折叠列表',w:300,h:240,g:'展示',d:{
     style:'list',
@@ -1902,35 +1918,68 @@ function renderCanvas(){
 function renderFixedNavbars(navParts){
   const canvas=document.getElementById('canvas');
   if(!canvas)return;
-  canvas.querySelectorAll('.m3nav-fixed-layer').forEach(n=>n.remove());
-  if(S.editingPage)return;
   const s=scr();if(!s)return;
+  if(S.editingPage){
+    canvas.querySelectorAll('.m3nav-fixed-layer').forEach(n=>n.remove());
+    return;
+  }
   const home=(navParts||[]).filter(p=>navShownOnScreen(p,S.cur));
   const mirrors=navbarsForScreen(S.cur).filter(x=>x.mirror).map(x=>x.p);
   const all=[...home.map(p=>({p,mirror:false})),...mirrors.map(p=>({p,mirror:true}))];
-  if(!all.length)return;
-  const layer=document.createElement('div');
-  layer.className='m3nav-fixed-layer';
+  // 复用已有固定层，避免每次重建（保留胶囊 transition）
+  let layer=canvas.querySelector('.m3nav-fixed-layer');
+  if(!layer){
+    layer=document.createElement('div');
+    layer.className='m3nav-fixed-layer';
+    canvas.appendChild(layer);
+  }
+  const keepIds=new Set();
   all.forEach(({p,mirror})=>{
-    const pri=p.color||S.color||'#6750A4';
+    keepIds.add(p.id);
+    let el=layer.querySelector(`.m3nav[data-navbar-mirror="${p.id}"]`);
     const sstyle=p.style||'pill';
     const isHome=(!mirror)&&(S.cur===navHomeScreen(p))&&!S.preview;
-    const el=document.createElement('div');
-    el.className='m3nav m3nav-'+sstyle+(isHome?' m3nav-edit':'');
-    el.setAttribute('data-navbar-mirror',p.id);
-    el.setAttribute('data-navbar-fixed','1');
-    el.style.cssText=`position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;--nav-pri:${pri};`;
-    el.innerHTML=navItemsHtml(p);
-    if(S.preview){el.style.pointerEvents='auto';}
-    else{el.style.pointerEvents=isHome?'auto':'none';}
-    if(isHome){
-      // 编辑态：点击选中并可拖动 / 长按菜单（导航栏不在 .part 流里，单独绑定）
+    const needRebuild=!el
+      || el.getAttribute('data-nav-style')!==sstyle
+      || el.getAttribute('data-nav-mode')!==String(mirror);
+    if(needRebuild){
+      if(el)el.remove();
+      el=document.createElement('div');
+      el.setAttribute('data-navbar-mirror',p.id);
+      el.setAttribute('data-navbar-fixed','1');
+      el.setAttribute('data-nav-style',sstyle);
+      el.setAttribute('data-nav-mode',String(mirror));
       el.setAttribute('data-navbar-id',p.id);
-      bindFixedNavbar(el,p);
+      el.innerHTML=navItemsHtml(p);
+      layer.appendChild(el);
+    }else{
+      // 原地更新 pill 位置 + 按钮激活态（保留 transition）
+      syncNavInPlace(el,p);
     }
-    layer.appendChild(el);
+    // 统一外观/几何/事件
+    el.className='m3nav m3nav-'+sstyle+(isHome?' m3nav-edit':'');
+    el.style.cssText=`position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;--nav-pri:${p.color||S.color||'#6750A4'};`;
+    if(S.preview)el.style.pointerEvents='auto';
+    else el.style.pointerEvents=isHome?'auto':'none';
+    if(isHome)bindFixedNavbar(el,p);
   });
-  canvas.appendChild(layer);
+  // 移除已不显示的导航栏
+  layer.querySelectorAll('.m3nav').forEach(el=>{
+    if(!keepIds.has(el.getAttribute('data-navbar-mirror')))el.remove();
+  });
+}
+/* 原地同步：只更新 pill 位置和按钮激活态，保留 CSS transition（胶囊滑动效果） */
+function syncNavInPlace(el,p){
+  const items=p.items||[];
+  const cur=Math.max(0,Math.min(items.length-1,p.cur||0));
+  const pill=el.querySelector('.m3nav-pill');
+  if(pill){
+    pill.style.width=(100/Math.max(1,items.length))+'%';
+    pill.style.transform=`translateX(${cur*100}%)`;
+  }
+  el.querySelectorAll('.m3nav-item').forEach((btn,i)=>{
+    btn.classList.toggle('on',i===cur);
+  });
 }
 /* 固定层导航栏的选中/拖动/长按交互 */
 function bindFixedNavbar(el,p){
@@ -2059,7 +2108,16 @@ function renderPart(p,PV){
       const cstyle=d.cardStyle||'elevated';
       const sub=(d.sub!=null&&String(d.sub).length)
         ?`<small class="card-sub" ${f('sub')}>${esc(d.sub)}</small>`:'';
-      return `<div class="${cls('card card-'+cstyle)}" data-id="${p.id}" style="${st}border-radius:${p.radius!=null?p.radius+'px':R(12)}"><span ${f('text')}>${esc(d.text||'卡片内容')}</span>${sub}</div>`;
+      // 主文字大小 / 水平对齐 / 垂直位置（注释不变）
+      const tSize=(d.textSize!=null&&d.textSize>0)?`font-size:${d.textSize}px;`:'';
+      const tAlign=d.textAlign?`text-align:${d.textAlign};`:'';
+      const vAlign=d.textVAlign||'top';
+      const tJust=vAlign==='middle'?'center':(vAlign==='bottom'?'flex-end':'flex-start');
+      const innerStyle=`width:100%;display:flex;flex-direction:column;align-items:${d.textAlign==='center'?'center':d.textAlign==='right'?'flex-end':'flex-start'};justify-content:${tJust};height:100%;`;
+      return `<div class="${cls('card card-'+cstyle)}" data-id="${p.id}" style="${st}border-radius:${p.radius!=null?p.radius+'px':R(12)}">
+        <div class="card-inner" style="${innerStyle}">
+          <span ${f('text')} style="${tSize}${tAlign}">${esc(d.text||'卡片内容')}</span>${sub}
+        </div></div>`;
     }
     case 'list-item':return `<div class="${cls('li')}" data-id="${p.id}" style="${st}"><span class="lc">${d.icon||'📁'}</span><span class="lt"><span ${f('text')}>${esc(d.text||'列表标题')}</span><small ${f('sub')}>${esc(d.sub||'')}</small></span><span class="ar">›</span></div>`;
     case 'fold-list':{
@@ -3662,6 +3720,22 @@ function openProp(id){
       </div></div>`;
     h+=`<div class="fg"><label>注释（浅灰小字，可留空）</label>
       <input type="text" value="${esc(p.sub||'')}" placeholder="不添加则留空" oninput="upProp('sub',this.value)"></div>`;
+    // 主文字大小 / 位置（注释不变）
+    h+=`<div class="fg"><label>文字大小：<b id="cardSizeLabel">${p.textSize||14}px</b></label>
+      <input type="range" min="10" max="48" step="1" value="${p.textSize||14}"
+        oninput="upProp('textSize',+this.value);const l=document.getElementById('cardSizeLabel');if(l)l.textContent=this.value+'px';"></div>`;
+    h+=`<div class="fg"><label>文字水平对齐</label>
+      <div class="mat-row">
+        <button class="mbtn ${(!p.textAlign||p.textAlign==='left')?'on':''}" onclick="upProp('textAlign','left')">左</button>
+        <button class="mbtn ${p.textAlign==='center'?'on':''}" onclick="upProp('textAlign','center')">中</button>
+        <button class="mbtn ${p.textAlign==='right'?'on':''}" onclick="upProp('textAlign','right')">右</button>
+      </div></div>`;
+    h+=`<div class="fg"><label>文字垂直位置</label>
+      <div class="mat-row">
+        <button class="mbtn ${(!p.textVAlign||p.textVAlign==='top')?'on':''}" onclick="upProp('textVAlign','top')">顶部</button>
+        <button class="mbtn ${p.textVAlign==='middle'?'on':''}" onclick="upProp('textVAlign','middle')">居中</button>
+        <button class="mbtn ${p.textVAlign==='bottom'?'on':''}" onclick="upProp('textVAlign','bottom')">底部</button>
+      </div></div>`;
   }
   if(p.type==='button'){
     h+=`<div class="fg"><label>按钮样式</label>
