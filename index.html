@@ -383,6 +383,12 @@ body.preview .part.locked::after{display:none;}
 .rate .s:active{transform:scale(1.2);}
 .card{padding:14px;border-radius:var(--r-md);background:var(--sur-v);
   font-size:14px;flex-direction:column;align-items:flex-start;}
+.card .card-sub{font-size:11px;color:#9A9A9A;
+  margin-top:4px;line-height:1.35;font-weight:400;display:block;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;}
+.card.card-tonal .card-sub,
+.card.card-gradient .card-sub{color:rgba(255,255,255,.7);}
+.card.card-glassy .card-sub{color:rgba(0,0,0,.45);}
 /* 卡片样式变体 */
 .card.card-elevated{background:var(--sur);
   box-shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);}
@@ -1078,7 +1084,7 @@ const TYPES=[
   {t:'radio',i:'🔵',n:'单选框',w:120,h:32,g:'输入',d:{text:'选项',on:true}},
   {t:'switch',i:'🔀',n:'开关',w:52,h:32,g:'输入',d:{on:true}},
   {t:'slider',i:'🎚️',n:'滑块',w:200,h:24,g:'输入',d:{value:60}},
-  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容',cardStyle:'elevated',bgColor:'',fgColor:'',radius:null,borderColor:'',shadow:null}},
+  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容',sub:'',cardStyle:'elevated',bgColor:'',fgColor:'',radius:null,borderColor:'',shadow:null}},
   {t:'list-item',i:'📋',n:'列表项',w:300,h:56,g:'展示',d:{text:'列表标题',sub:'副标题文字',icon:'📁'}},
   {t:'fold-list',i:'📂',n:'折叠列表',w:300,h:240,g:'展示',d:{
     style:'list',
@@ -1599,7 +1605,9 @@ function renderPart(p,PV){
       return `<div class="${cls('sldr')}" data-id="${p.id}" style="${st}"><div class="trk"><div class="fill" style="width:${d.value||0}%"></div></div><div class="thumb" style="left:${d.value||0}%"></div></div>`;
     case 'card':{
       const cstyle=d.cardStyle||'elevated';
-      return `<div class="${cls('card card-'+cstyle)}" data-id="${p.id}" style="${st}border-radius:${p.radius!=null?p.radius+'px':R(12)}"><span ${f('text')}>${esc(d.text||'卡片内容')}</span></div>`;
+      const sub=(d.sub!=null&&String(d.sub).length)
+        ?`<small class="card-sub" ${f('sub')}>${esc(d.sub)}</small>`:'';
+      return `<div class="${cls('card card-'+cstyle)}" data-id="${p.id}" style="${st}border-radius:${p.radius!=null?p.radius+'px':R(12)}"><span ${f('text')}>${esc(d.text||'卡片内容')}</span>${sub}</div>`;
     }
     case 'list-item':return `<div class="${cls('li')}" data-id="${p.id}" style="${st}"><span class="lc">${d.icon||'📁'}</span><span class="lt"><span ${f('text')}>${esc(d.text||'列表标题')}</span><small ${f('sub')}>${esc(d.sub||'')}</small></span><span class="ar">›</span></div>`;
     case 'fold-list':{
@@ -3004,6 +3012,8 @@ function openProp(id){
       <div class="mat-row" style="flex-wrap:wrap;">
         ${styles.map(([v,n])=>`<button class="mbtn ${(p.cardStyle||'elevated')===v?'on':''}" style="min-width:60px;" onclick="upProp('cardStyle','${v}')">${n}</button>`).join('')}
       </div></div>`;
+    h+=`<div class="fg"><label>注释（浅灰小字，可留空）</label>
+      <input type="text" value="${esc(p.sub||'')}" placeholder="不添加则留空" oninput="upProp('sub',this.value)"></div>`;
   }
   if(p.type==='button'){
     h+=`<div class="fg"><label>按钮样式</label>
