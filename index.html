@@ -1023,6 +1023,7 @@ body.preview .m3nav .m3nav-inner{outline:none!important;}
 <div class="stage" id="stage">
   <div class="canvas-wrap" id="canvasWrap">
     <div class="canvas" id="canvas">
+      <div class="screen-layer" id="screenLayer"></div>
       <svg class="link-layer" id="linkLayer"></svg>
       <div class="guide v" id="guideV"></div>
       <div class="guide h" id="guideH"></div>
@@ -2335,20 +2336,12 @@ function renderCanvas(){
   // 只重建"屏幕内容层"，保留固定层(svg/guide/导航/标题)避免被销毁 → 过渡不丢
   let screenLayer=el.querySelector('#screenLayer');
   if(!screenLayer){
-    // 首次或结构异常：完整重建
-    el.innerHTML=`<div class="screen-layer" id="screenLayer"></div>`;
-    el.appendChild(svg);el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);
-    screenLayer=el.querySelector('#screenLayer');
+    screenLayer=document.createElement('div');
+    screenLayer.id='screenLayer';
+    screenLayer.className='screen-layer';
+    el.appendChild(screenLayer);
   }
   screenLayer.innerHTML=contentHtml;
-  // 确保 svg/guide/floatbar 仍在（可能被旧逻辑清掉）
-  if(svg.parentNode!==el)el.appendChild(svg);
-  if(gv.parentNode!==el)el.appendChild(gv);
-  if(gh.parentNode!==el)el.appendChild(gh);
-  if(fb.parentNode!==el)el.appendChild(fb);
-  // 固定导航层若存在，确保留在 canvas 内（不移动、不销毁 → 指示条/胶囊过渡不丢）
-  const fixedLayer=el.querySelector('.m3nav-fixed-layer');
-  if(fixedLayer&&fixedLayer.parentNode!==el)el.appendChild(fixedLayer);
   renderFixedNavbars(navParts);
   renderFixedTitles();
   bindParts();bindCarousels();updateFloatBar();updateLinkLayer();
