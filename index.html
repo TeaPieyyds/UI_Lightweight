@@ -604,7 +604,8 @@ body.preview .part.scrollpage,
   align-items:center;justify-content:center;color:var(--on-sur-v);font-size:12px;gap:6px;pointer-events:none;}
 .scrollpage .sp-empty .big{font-size:36px;opacity:.4;}
 /* 编辑滚动页面内容时，画布允许纵向滚动 */
-.canvas.page-edit.scroll-editing{overflow-y:auto;align-items:flex-start;}
+/* 编辑滚动页面内容时：画布延伸，纵向可滚动 */
+.canvas.page-edit.scroll-editing{align-items:flex-start;}
 
 /* ===== 标题组件 ===== */
 .m3title{position:absolute;display:flex;align-items:center;box-sizing:border-box;
@@ -1920,7 +1921,13 @@ function getEditParts(){
 function getCanvasSize(){
   if(S.editingPage){
     const owner=byId(S.editingPage.pagerId);
-    if(owner)return {w:owner.w,h:owner.h};
+    if(owner){
+      if(owner.type==='scrollpage'){
+        // 编辑滚动页面：可编辑区域 = 内容高度（可一直向下延伸）
+        return {w:owner.w,h:Math.max(owner.contentH||400,owner.h)};
+      }
+      return {w:owner.w,h:owner.h};
+    }
   }
   return SIZE_MAP[S.screenSize];
 }
@@ -2237,6 +2244,10 @@ function renderTabs(){
       onclick="switchScr('${s.id}')">${esc(s.name)}</button>`).join('')+
     `<button class="tab add" onclick="addScr()">＋</button>`;
 }
+function resetScrollEditCanvas(el,wrap){
+  if(el){el.style.height='';el.classList.remove('scroll-editing');}
+  if(wrap)wrap.style.height='';
+}
 function renderCanvas(){
   const s=scr();S.sel=s?.sel||null;
   const el=document.getElementById('canvas');
@@ -2246,6 +2257,7 @@ function renderCanvas(){
   const gh=document.getElementById('guideH');
   const PV=S.preview;
   let html='';
+  const wrap=document.querySelector('.canvas-wrap');
   if(S.editingPage){
     const parts=getEditParts()||[];
     html=parts.map(p=>renderPart(p,PV)).join('');
@@ -2253,9 +2265,16 @@ function renderCanvas(){
     if(owner&&owner.type==='fold-list'){
       const it=(owner.items||[])[S.editingPage.itemIdx];
       el.style.background=it?.color||'';
+      resetScrollEditCanvas(el,wrap);
     }else if(owner&&owner.type==='scrollpage'){
       el.style.background='';
+      // 画布延伸为滚动页面的内容高度，使组件可拖到下方 & 可纵向滚动
+      const ch=Math.max(owner.contentH||400,getCanvasSize().h);
+      el.style.height=ch+'px';
+      if(wrap)wrap.style.height=(ch*1)+'px';
+      el.classList.add('scroll-editing');
     }else{
+      resetScrollEditCanvas(el,wrap);
       const pg=(owner?.pages||[])[S.editingPage.pageIdx];
       if(pg&&pg.color){el.style.background=pg.color;}
       else{el.style.background='';}
@@ -2263,6 +2282,7 @@ function renderCanvas(){
   }else{
     if(!s){el.innerHTML='';el.appendChild(svg);el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);return;}
     el.style.background='';
+    resetScrollEditCanvas(el,wrap);
     html=s.parts.map(p=>renderPart(p,PV)).join('');
   }
   // 屏幕内容放进独立图层（切屏动画只作用于它）
