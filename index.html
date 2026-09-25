@@ -1256,17 +1256,6 @@ function navGo(e,id,i){
     renderCanvas();
   }
 }
-/* 预览模式下带过渡动画切屏 */
-function slideToScreen(sid,anim){
-  const c=document.getElementById('canvas');
-  if(!c){S.cur=sid;renderCanvas();return;}
-  const cls='anim-'+(anim||'slide-left');
-  c.classList.add(cls);
-  setTimeout(()=>{
-    S.cur=sid;renderCanvas();
-    c.classList.remove(cls);
-  },280);
-}
 /* ---------- 导航栏设置面板（作用于选中的 navbar 组件） ---------- */
 /* 打开导航栏设置：优先用当前选中的，否则用本屏的导航栏 */
 function openNavbarProps(){
@@ -1774,11 +1763,11 @@ function setGridSize(v){
     `linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px)`;
   c.style.backgroundSize=`${g}px ${g}px`;
 }
-/* 吸附松紧：滑条 0=严格 1=适中 2=开放，分别对应吸附半径 3/7/12px */
+/* 吸附松紧：滑条 0=严格 1=适中 2=开放，对应吸附半径 3/7/0px（0=不吸附，随意放置） */
 const SNAP_LEVELS=[
   {name:'严格',px:3},
   {name:'适中',px:7},
-  {name:'开放',px:12},
+  {name:'开放',px:0},
 ];
 function snapLevelFromPx(px){
   let best=1,min=Infinity;
@@ -3002,9 +2991,10 @@ function onTS(e){
     if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
     if(e.target.closest('input,textarea')) return;
     if(e.target.closest(PREVIEW_INTERACTIVE_SEL)) return;
+    if(e.target.closest('[data-navbar]')) return;   // 导航栏按钮走自身 onclick
     e.preventDefault();
     const partEl=e.target.closest('.part');
-    if(partEl)onPreviewTap(partEl.dataset.id);
+    if(partEl)onPreviewTap(partEl.dataset.id,e);
     return;
   }
   if(e.target.isContentEditable)return;
@@ -3042,7 +3032,7 @@ function onMD(e){
     if(e.target.closest(PREVIEW_INTERACTIVE_SEL)) return;
     e.preventDefault();
     const partEl=e.target.closest('.part');
-    if(partEl)onPreviewTap(partEl.dataset.id);
+    if(partEl)onPreviewTap(partEl.dataset.id,e);
     return;
   }
   if(e.target.isContentEditable)return;
@@ -3108,8 +3098,9 @@ function onMove(px,py){
   updateLinkLayer();
 }
 function computeSnap(p,nx,ny,cw,ch,parts){
-  const TH=S.snapStrength||7;
-  const others=(parts||[]).filter(x=>x.id!==p.id&&x.group!==p.group);
+  const TH=(S.snapStrength==null?7:S.snapStrength);
+  if(TH<=0)return {x:null,y:null,gx:0,gy:0};   // 开放档：不吸附，随意放置
+  const others=(parts||[]).filter(x=>x.id!==p.id&&!(p.group!=null&&x.group===p.group));
   const xs=[nx,nx+p.w/2,nx+p.w],ys=[ny,ny+p.h/2,ny+p.h];
   const tx=[0,cw/2,cw],ty=[0,ch/2,ch];
   others.forEach(o=>{tx.push(o.x,o.x+o.w/2,o.x+o.w);ty.push(o.y,o.y+o.h/2,o.y+o.h);});
@@ -3206,19 +3197,20 @@ function togglePreview(){
 function slideToScreen(id,anim){
   const target=S.screens.find(s=>s.id===id);if(!target)return;
   const canvas=document.getElementById('canvas');
-  if(!anim||anim==='none'){S.cur=target.id;renderAll();return;}
+  if(!canvas){S.cur=target.id;renderCanvas();return;}
+  if(!anim||anim==='none'){S.cur=target.id;renderCanvas();return;}
   const cls='anim-'+anim;
   canvas.classList.remove('anim-slide-left','anim-slide-right','anim-fade','anim-scale');
   void canvas.offsetWidth;
   canvas.classList.add(cls);
-  setTimeout(()=>{S.cur=target.id;renderAll();canvas.classList.remove(cls);},320);
+  setTimeout(()=>{S.cur=target.id;renderCanvas();canvas.classList.remove(cls);},320);
 }
 
 /* ★ 预览模式点击：优先执行连线动作，其次执行组件自身行为 */
-function onPreviewTap(id){
+function onPreviewTap(id,e){
   const parts=getEditParts();if(!parts)return;
   const conns=(S.connections||[]).filter(c=>c.from===id);
-  if(conns.length){
+  if(conns.length&&!(e&&e.target.closest('[data-navbar],[data-navbar-mirror]'))){
     conns.forEach(c=>{
       const target=parts.find(x=>x.id===c.to);
       if(!target)return;
@@ -3230,6 +3222,22 @@ function onPreviewTap(id){
         }
       }
     });
+    return;
+  }
+  // 导航栏：按点到的具体按钮跳转
+  const navHost=e&&e.target.closest('[data-navbar],[data-navbar-mirror]');
+  const navId=navHost?(navHost.getAttribute('data-navbar-mirror')||navHost.dataset.id):null;
+  if(navId||(parts.find(x=>x.id===id)||{}).type==='navbar'){
+    const p=byIdAny(navId||id);if(!p)return;
+    let idx=p.cur;
+    const btn=e&&e.target.closest('.m3nav-item');
+    if(btn&&btn.dataset.idx!=null)idx=+btn.dataset.idx;
+    const it=(p.items||[])[idx];if(!it)return;
+    p.cur=idx;
+    if(S.preview){renderCanvas();}
+    if(it.screenId&&S.screens.some(s=>s.id===it.screenId)){
+      slideToScreen(it.screenId,it.anim||'slide-left');
+    }
     return;
   }
   const p=parts.find(x=>x.id===id);
