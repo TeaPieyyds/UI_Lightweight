@@ -383,6 +383,21 @@ body.preview .part.locked::after{display:none;}
 .rate .s:active{transform:scale(1.2);}
 .card{padding:14px;border-radius:var(--r-md);background:var(--sur-v);
   font-size:14px;flex-direction:column;align-items:flex-start;}
+/* 卡片样式变体 */
+.card.card-elevated{background:var(--sur);
+  box-shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);}
+.card.card-filled{background:var(--sur-v);box-shadow:none;}
+.card.card-outlined{background:var(--sur);
+  border:1px solid var(--out-v);box-shadow:none;}
+.card.card-tonal{background:var(--sec-c);color:var(--on-sec-c);box-shadow:none;}
+.card.card-flat{background:transparent;box-shadow:none;padding:10px;}
+.card.card-glassy{background:rgba(255,255,255,.55);
+  backdrop-filter:blur(14px) saturate(180%);
+  -webkit-backdrop-filter:blur(14px) saturate(180%);
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:0 4px 18px rgba(0,0,0,.1);}
+.card.card-gradient{background:linear-gradient(135deg,var(--pri),#B69DF8);
+  color:#fff;box-shadow:0 4px 16px rgba(103,80,164,.35);}
 .li{display:flex;align-items:center;gap:12px;padding:10px 14px;
   background:var(--sur);font-size:14px;justify-content:flex-start;width:100%;}
 .li .lc{width:32px;height:32px;border-radius:50%;background:var(--sec-c);
@@ -690,6 +705,25 @@ body.preview .part{cursor:pointer;}
 .icon-grid button{padding:8px 0;border:none;background:transparent;font-size:19px;
   border-radius:6px;cursor:pointer;}
 .icon-grid button.on{background:var(--pri-c);}
+/* 颜色选择行 */
+.color-row{display:flex;gap:8px;}
+.color-cell{flex:1;position:relative;display:flex;flex-direction:column;gap:4px;
+  align-items:center;background:var(--sur-v);border-radius:var(--r-md);padding:8px 4px;}
+.color-cell span{font-size:10px;color:var(--on-sur-v);}
+.color-cell input[type=color]{width:100%;height:32px;border:none;border-radius:6px;
+  background:transparent;cursor:pointer;}
+.color-cell .clr-clear{position:absolute;top:2px;right:2px;width:16px;height:16px;
+  border:none;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;
+  font-size:9px;line-height:1;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;padding:0;}
+/* 前景色：让内部文字/图标继承 */
+.part[style*="color:"] > span,
+.part[style*="color:"] > .fl-title,
+.part[style*="color:"] > .m,
+.part[style*="color:"] > .lt,
+.part[style*="color:"] > .sl,
+.part[style*="color:"] > .sv,
+.part[style*="color:"] > .act{color:inherit!important;}
 
 .preset-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
 .preset-chip{width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:transform .15s;}
@@ -1044,7 +1078,7 @@ const TYPES=[
   {t:'radio',i:'🔵',n:'单选框',w:120,h:32,g:'输入',d:{text:'选项',on:true}},
   {t:'switch',i:'🔀',n:'开关',w:52,h:32,g:'输入',d:{on:true}},
   {t:'slider',i:'🎚️',n:'滑块',w:200,h:24,g:'输入',d:{value:60}},
-  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容'}},
+  {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容',cardStyle:'elevated',bgColor:'',fgColor:'',radius:null,borderColor:'',shadow:null}},
   {t:'list-item',i:'📋',n:'列表项',w:300,h:56,g:'展示',d:{text:'列表标题',sub:'副标题文字',icon:'📁'}},
   {t:'fold-list',i:'📂',n:'折叠列表',w:300,h:240,g:'展示',d:{
     style:'list',
@@ -1501,6 +1535,20 @@ function matInlineStyle(p){
   }
   return '';
 }
+/* 通用外观：所有组件都可自定义 背景色 / 前景色 / 描边 / 圆角 / 阴影 */
+function appearanceStyle(p){
+  let s='';
+  if(p.bgColor)s+=`background:${p.bgColor}!important;`;
+  if(p.fgColor)s+=`color:${p.fgColor}!important;`;
+  if(p.borderColor)s+=`border:1px solid ${p.borderColor}!important;`;
+  if(p.borderWidth!=null&&p.borderWidth>=0)s+=`border-width:${p.borderWidth}px!important;`;
+  if(p.radius!=null)s+=`border-radius:${p.radius}px!important;`;
+  const sh=p.shadow!=null?p.shadow:null;
+  if(sh!=null)s+=sh===0?`box-shadow:none!important;`
+    :`box-shadow:0 ${Math.round(sh/2)}px ${sh}px rgba(0,0,0,.18)!important;`;
+  if(p.opacity!=null&&p.opacity<100)s+=`opacity:${p.opacity/100};`;
+  return s;
+}
 function imgContent(p){
   if(p.imgMode==='data'&&p.data)return `<img src="${p.data}" alt="">`;
   if(p.imgMode==='url'&&p.url)return `<img src="${esc(p.url)}" alt="">`;
@@ -1514,7 +1562,8 @@ function renderPart(p,PV){
   const hd=p.hidden?'hidden':'';
   const base=`left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px;`;
   const mst=matInlineStyle(p);
-  const st=base+mst;
+  const ast=appearanceStyle(p);
+  const st=base+mst+ast;
   const d=p;
   const cls=(b)=>`part ${b} ${mat} ${sel} ${lk} ${hd}`;
   const f=(k)=>PV?``:`data-field="${k}"`;
@@ -1548,7 +1597,10 @@ function renderPart(p,PV){
     case 'slider':
       if(PV)return `<div class="${cls('sldr')}" data-id="${p.id}" style="${st}" data-slider="${p.id}"><div class="trk"><div class="fill" style="width:${d.value||0}%"></div></div><div class="thumb" style="left:${d.value||0}%"></div></div>`;
       return `<div class="${cls('sldr')}" data-id="${p.id}" style="${st}"><div class="trk"><div class="fill" style="width:${d.value||0}%"></div></div><div class="thumb" style="left:${d.value||0}%"></div></div>`;
-    case 'card':return `<div class="${cls('card')}" data-id="${p.id}" style="${st}border-radius:${R(12)}"><span ${f('text')}>${esc(d.text||'卡片内容')}</span></div>`;
+    case 'card':{
+      const cstyle=d.cardStyle||'elevated';
+      return `<div class="${cls('card card-'+cstyle)}" data-id="${p.id}" style="${st}border-radius:${p.radius!=null?p.radius+'px':R(12)}"><span ${f('text')}>${esc(d.text||'卡片内容')}</span></div>`;
+    }
     case 'list-item':return `<div class="${cls('li')}" data-id="${p.id}" style="${st}"><span class="lc">${d.icon||'📁'}</span><span class="lt"><span ${f('text')}>${esc(d.text||'列表标题')}</span><small ${f('sub')}>${esc(d.sub||'')}</small></span><span class="ar">›</span></div>`;
     case 'fold-list':{
       const items=d.items||[];
@@ -2946,6 +2998,13 @@ function openProp(id){
   if(['icon-btn','fab','list-item','appbar','stat'].includes(p.type)){
     h+=`<div class="fg"><label>图标</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><span style="font-size:26px;">${p.icon||'★'}</span><button class="mbtn" style="flex:1;" onclick="openIconPicker('${p.id}','icon')">选择图标</button></div></div>`;
   }
+  if(p.type==='card'){
+    const styles=[['elevated','悬浮'],['filled','填充'],['outlined','描边'],['tonal','色调'],['flat','无阴影'],['glassy','玻璃'],['gradient','渐变']];
+    h+=`<div class="fg"><label>卡片样式</label>
+      <div class="mat-row" style="flex-wrap:wrap;">
+        ${styles.map(([v,n])=>`<button class="mbtn ${(p.cardStyle||'elevated')===v?'on':''}" style="min-width:60px;" onclick="upProp('cardStyle','${v}')">${n}</button>`).join('')}
+      </div></div>`;
+  }
   if(p.type==='button'){
     h+=`<div class="fg"><label>按钮样式</label>
       <div class="mat-row">
@@ -3082,6 +3141,37 @@ function openProp(id){
     });
     h+=`</div>`;
   }
+
+  h+=`<div class="fg"><label>外观颜色</label>
+    <div class="color-row">
+      <div class="color-cell">
+        <span>背景</span>
+        <input type="color" value="${p.bgColor||'#FFFFFF'}" oninput="upProp('bgColor',this.value)">
+        ${p.bgColor?`<button class="clr-clear" onclick="upProp('bgColor','')">✕</button>`:''}
+      </div>
+      <div class="color-cell">
+        <span>文字/图标</span>
+        <input type="color" value="${p.fgColor||'#1D1B20'}" oninput="upProp('fgColor',this.value)">
+        ${p.fgColor?`<button class="clr-clear" onclick="upProp('fgColor','')">✕</button>`:''}
+      </div>
+      <div class="color-cell">
+        <span>描边</span>
+        <input type="color" value="${p.borderColor||'#79747E'}" oninput="upProp('borderColor',this.value)">
+        ${p.borderColor?`<button class="clr-clear" onclick="upProp('borderColor','')">✕</button>`:''}
+      </div>
+    </div></div>`;
+  h+=`<div class="fg"><label data-vlabel="圆角：{}px">圆角：${p.radius!=null?p.radius:'默认'}</label>
+    <input type="range" min="0" max="60" value="${p.radius!=null?p.radius:0}"
+      oninput="upProp('radius',+this.value)">
+    <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+      ${p.radius!=null?`<button class="mbtn" style="padding:4px 12px;font-size:11px;" onclick="upProp('radius',null)">恢复默认圆角</button>`:''}
+    </div></div>`;
+  h+=`<div class="fg"><label data-vlabel="阴影：{}">阴影：${p.shadow!=null?p.shadow:'默认'}</label>
+    <input type="range" min="0" max="30" value="${p.shadow!=null?p.shadow:0}"
+      oninput="upProp('shadow',+this.value)">
+    <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+      ${p.shadow!=null?`<button class="mbtn" style="padding:4px 12px;font-size:11px;" onclick="upProp('shadow',null)">恢复默认阴影</button>`:''}
+    </div></div>`;
 
   h+=`<div class="fg"><label>材质</label>
     <div class="mat-row">
@@ -3322,7 +3412,7 @@ function upProp(k,v){
   const fade=(k==='glassBlur'||k==='glassOpacity'||k==='material');
   updatePartEl(p,{fade});
   if(k==='value'||k==='glassBlur'||k==='glassOpacity'
-     ||k==='x'||k==='y'||k==='w'||k==='h'){
+     ||k==='x'||k==='y'||k==='w'||k==='h'||k==='radius'||k==='shadow'){
     document.querySelectorAll('#propBody label[data-vlabel]').forEach(l=>{
       const tpl=l.dataset.vlabel;
       if(tpl.includes('模糊度')&&k==='glassBlur')l.textContent=tpl.replace('{}',v);
@@ -3333,6 +3423,8 @@ function upProp(k,v){
       else if(tpl.startsWith('Y：')&&k==='y')l.textContent=tpl.replace('{}',v);
       else if(tpl.startsWith('宽：')&&k==='w')l.textContent=tpl.replace('{}',v);
       else if(tpl.startsWith('高：')&&k==='h')l.textContent=tpl.replace('{}',v);
+      else if(tpl.startsWith('圆角：')&&k==='radius')l.textContent=`圆角：${v}px`;
+      else if(tpl.startsWith('阴影：')&&k==='shadow')l.textContent=`阴影：${v}`;
     });
   }
   if(k==='material'&&(v==='glass'||v==='liquid')){
@@ -3340,7 +3432,7 @@ function upProp(k,v){
     if(sel&&sel.value==='plain'){sel.value='colorful';document.getElementById('canvas').classList.add('has-bg');}
   }
   if(k==='imgMode')setTimeout(()=>openProp(p.id),0);
-  if(['variant','toggle','on','anim','material','autoplay','colorIdx'].includes(k)){
+  if(['variant','toggle','on','anim','material','autoplay','colorIdx','cardStyle','bgColor','fgColor','borderColor'].includes(k)){
     setTimeout(()=>openProp(p.id),0);
   }
   updateLinkLayer();
