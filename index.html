@@ -812,6 +812,97 @@ body.preview .preview-back{display:flex;}
   border-radius:20px;font-size:12px;display:none;white-space:nowrap;}
 body.preview .preview-tip{display:block;}
 
+/* ================= 滑动导航栏 ================= */
+.m3nav{position:absolute;left:0;right:0;bottom:0;z-index:650;
+  pointer-events:none;display:flex;justify-content:center;
+  padding:0 12px calc(12px + env(safe-area-inset-bottom));
+  transition:transform .3s cubic-bezier(.2,0,0,1);}
+.m3nav .m3nav-inner{position:relative;pointer-events:auto;
+  display:flex;align-items:stretch;
+  background:var(--sur);box-shadow:0 4px 24px rgba(0,0,0,.18);
+  transition:all .25s;}
+/* 胶囊样式 */
+.m3nav-pill .m3nav-inner{width:min(92%,340px);border-radius:26px;
+  padding:6px;background:var(--sur);
+  border:1px solid var(--out-v);}
+.m3nav-pill .m3nav-item{flex:1;position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 2px;border:none;background:transparent;cursor:pointer;
+  color:var(--on-sur-v);font-family:var(--font);
+  transition:color .25s,transform .25s;}
+.m3nav-pill .m3nav-item .m3nav-ico{font-size:19px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.m3nav-pill .m3nav-item .m3nav-lbl{font-size:10px;white-space:nowrap;overflow:hidden;
+  max-width:100%;opacity:.85;transition:opacity .25s;}
+.m3nav-pill .m3nav-item.on{color:var(--nav-pri);}
+.m3nav-pill .m3nav-item.on .m3nav-ico{transform:scale(1.18) translateY(-1px);}
+.m3nav-pill .m3nav-item:active .m3nav-ico{transform:scale(.88);}
+.m3nav .m3nav-pill{position:absolute;top:6px;bottom:6px;left:6px;
+  background:color-mix(in srgb,var(--nav-pri) 18%,transparent);
+  border-radius:20px;z-index:1;transition:transform .3s cubic-bezier(.2,0,0,1);
+  pointer-events:none;}
+/* 经典样式 */
+.m3nav-bar .m3nav-inner{width:100%;border-radius:0;
+  border-top:1px solid var(--out-v);padding:4px 0 0;}
+.m3nav-bar .m3nav-item{flex:1;position:relative;display:flex;flex-direction:column;
+  align-items:center;gap:2px;padding:8px 2px 10px;border:none;background:transparent;
+  cursor:pointer;color:var(--on-sur-v);font-family:var(--font);
+  transition:color .25s;}
+.m3nav-bar .m3nav-item .m3nav-ico{font-size:20px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.m3nav-bar .m3nav-item .m3nav-lbl{font-size:10px;white-space:nowrap;opacity:.85;}
+.m3nav-bar .m3nav-item .m3nav-ind{position:absolute;top:0;left:50%;transform:translateX(-50%) scaleX(0);
+  width:26px;height:3px;border-radius:2px;background:var(--nav-pri);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.m3nav-bar .m3nav-item.on{color:var(--nav-pri);}
+.m3nav-bar .m3nav-item.on .m3nav-ico{transform:scale(1.15) translateY(-2px);}
+.m3nav-bar .m3nav-item.on .m3nav-ind{transform:translateX(-50%) scaleX(1);}
+.m3nav-bar .m3nav-item:active{background:color-mix(in srgb,var(--nav-pri) 10%,transparent);}
+/* 悬浮样式 */
+.m3nav-floating{padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+.m3nav-floating .m3nav-inner{width:min(78%,280px);border-radius:32px;padding:8px;
+  background:color-mix(in srgb,var(--sur) 88%,var(--nav-pri));
+  box-shadow:0 8px 32px rgba(0,0,0,.28);
+  backdrop-filter:blur(18px) saturate(180%);
+  -webkit-backdrop-filter:blur(18px) saturate(180%);
+  border:1px solid rgba(255,255,255,.4);}
+.m3nav-floating .m3nav-item{flex:1;position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  padding:12px 0;border:none;background:transparent;cursor:pointer;
+  color:var(--on-sur-v);font-family:var(--font);
+  transition:color .25s,transform .3s cubic-bezier(.34,1.56,.64,1);}
+.m3nav-floating .m3nav-item .m3nav-ico{font-size:21px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.m3nav-floating .m3nav-item.on{color:var(--nav-pri);transform:translateY(-2px);}
+.m3nav-floating .m3nav-item.on .m3nav-ico{transform:scale(1.25);}
+.m3nav-floating .m3nav-item:active .m3nav-ico{transform:scale(.85);}
+.m3nav-floating .m3nav-pill{position:absolute;top:8px;bottom:8px;left:8px;
+  border-radius:24px;background:color-mix(in srgb,var(--nav-pri) 16%,transparent);
+  z-index:1;transition:transform .3s cubic-bezier(.2,0,0,1);}
+/* 编辑态：虚线框 + 半透明 + 不可点 */
+.m3nav-edit{opacity:.92;}
+.m3nav-edit .m3nav-inner{outline:1.5px dashed var(--pri);outline-offset:3px;
+  pointer-events:auto;cursor:pointer;}
+.m3nav-edit .m3nav-item{pointer-events:none;}
+.m3nav-edit::before{content:'滑动导航栏 · 点击设置';position:absolute;
+  top:4px;left:50%;transform:translateX(-50%);
+  font-size:10px;color:var(--pri);background:color-mix(in srgb,var(--sur) 92%,var(--pri));
+  padding:2px 10px;border-radius:10px;white-space:nowrap;pointer-events:none;
+  outline:1px dashed var(--pri);z-index:5;}
+body.preview .m3nav-edit::before{display:none;}
+body.preview .m3nav .m3nav-inner{outline:none!important;}
+
+/* 导航栏设置面板辅助 */
+.screen-chk{display:flex;flex-direction:column;gap:6px;}
+.screen-chk .mbtn{width:100%;text-align:left;}
+.nav-item-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;
+  padding:8px;background:var(--sur-v);border-radius:var(--r-md);}
+.nav-item-ico{font-size:22px;width:32px;text-align:center;flex:0 0 auto;}
+.nav-item-info{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;}
+.nav-item-info input,.nav-item-info select{width:100%;padding:7px 9px;font-size:12px;
+  border-radius:6px;border:1px solid var(--out);background:var(--sur);
+  color:var(--on-sur);font-family:var(--font);}
+.nav-item-btns{display:flex;flex-direction:column;gap:4px;flex:0 0 auto;}
+.nav-item-btns .mbtn{min-width:0;}
+.nav-item-btns .mbtn[disabled]{opacity:.35;}
+
 ::-webkit-scrollbar{width:0;height:0;}
 @keyframes slide-left{from{transform:translateX(0);opacity:1;}to{transform:translateX(-30%);opacity:0;}}
 @keyframes slide-right{from{transform:translateX(0);opacity:1;}to{transform:translateX(30%);opacity:0;}}
@@ -1068,7 +1159,209 @@ const S={
   pendingLink:null,
   linkNoteMode:'full',
   linkNoteLimit:20,
+  navbar:null, /* 滑动导航栏（全局停靠层），首次 init 时用 defaultNavbar() 填充 */
 };
+
+/* 滑动导航栏默认配置：3 样式 pill/bar/floating，只在指定屏幕显示 */
+function defaultNavbar(){
+  return {
+    on:true,
+    style:'pill',          // pill 胶囊 / bar 经典 / floating 悬浮
+    color:'',              // 空=跟随主题主色
+    screens:[],            // 只在这些屏幕显示；空数组=全部屏幕
+    items:[
+      {id:'nv1',icon:'🏠',label:'首页',screenId:''},
+      {id:'nv2',icon:'🔍',label:'发现',screenId:''},
+      {id:'nv3',icon:'👤',label:'我的',screenId:''},
+    ],
+    cur:0,
+  };
+}
+
+/* ================= 滑动导航栏 渲染/逻辑 ================= */
+/* 当前屏是否要显示导航栏 */
+function navShownOnScreen(sid){
+  const nb=S.navbar;if(!nb||!nb.on)return false;
+  const list=nb.screens||[];
+  if(!list.length)return true;      // 空=全部屏幕
+  return list.includes(sid);
+}
+/* 生成/更新导航栏 DOM（编辑态加虚线框且不可点） */
+function renderNavbarInto(){
+  const canvas=document.getElementById('canvas');
+  if(!canvas)return;
+  let host=document.getElementById('m3navBar');
+  const nb=S.navbar;
+  const editing=!S.preview;
+  const show=nb&&nb.on&&!S.editingPage&&navShownOnScreen(S.cur);
+  if(!show){ if(host)host.remove(); return; }
+  if(!host){
+    host=document.createElement('div');
+    host.id='m3navBar';
+    canvas.appendChild(host);
+  }
+  const items=nb.items||[];
+  const cur=Math.max(0,Math.min(items.length-1,nb.cur||0));
+  const style=nb.style||'pill';
+  const pri=nb.color||S.color||'#6750A4';
+  host.className='m3nav m3nav-'+style+(editing?' m3nav-edit':'');
+  host.style.setProperty('--nav-pri',pri);
+  const itemHtml=(withLabel)=>items.map((it,i)=>`
+      <button class="m3nav-item ${i===cur?'on':''}" data-idx="${i}"
+        ${editing?'':`onclick="navGo(${i})"`}>
+        <span class="m3nav-ico">${it.icon||'●'}</span>
+        ${withLabel?`<span class="m3nav-lbl">${esc(it.label||'')}</span>`:''}
+      </button>`).join('');
+  const pill=`<div class="m3nav-pill" style="width:${100/Math.max(1,items.length)}%;transform:translateX(${cur*100}%)"></div>`;
+  if(style==='bar'){
+    host.innerHTML=`<div class="m3nav-inner">${items.map((it,i)=>`
+      <button class="m3nav-item ${i===cur?'on':''}" data-idx="${i}" ${editing?'':`onclick="navGo(${i})"`}>
+        <span class="m3nav-ico">${it.icon||'●'}</span>
+        <span class="m3nav-lbl">${esc(it.label||'')}</span>
+        <span class="m3nav-ind"></span>
+      </button>`).join('')}</div>`;
+  }else if(style==='floating'){
+    host.innerHTML=`<div class="m3nav-inner">${pill}${itemHtml(false)}</div>`;
+  }else{
+    host.innerHTML=`<div class="m3nav-inner">${pill}${itemHtml(true)}</div>`;
+  }
+  // 编辑态：点击导航栏打开设置面板
+  if(editing){
+    host.style.pointerEvents='auto';
+    host.onclick=navEditOpen;
+  }else{
+    host.onclick=null;
+  }
+}
+/* 编辑态点击导航栏 → 打开设置面板 */
+function navEditOpen(e){
+  if(e)e.stopPropagation();
+  if(S.preview)return;
+  openNavbarProps();
+}
+/* 点击导航项：激活 + 跳转关联屏幕（带动画） */
+function navGo(i){
+  const nb=S.navbar;if(!nb)return;
+  const it=(nb.items||[])[i];if(!it)return;
+  nb.cur=i;persist();
+  if(it.screenId&&S.screens.some(s=>s.id===it.screenId)){
+    slideToScreen(it.screenId,it.anim||'slide-left');
+  }
+  renderNavbarInto();
+}
+/* 预览模式下带过渡动画切屏 */
+function slideToScreen(sid,anim){
+  const c=document.getElementById('canvas');
+  if(!c){S.cur=sid;renderCanvas();return;}
+  const cls='anim-'+(anim||'slide-left');
+  c.classList.add(cls);
+  setTimeout(()=>{
+    S.cur=sid;renderCanvas();
+    c.classList.remove(cls);
+  },280);
+}
+/* ---------- 导航栏设置面板 ---------- */
+function openNavbarProps(){
+  if(S.preview)return;
+  if(!S.navbar)S.navbar=defaultNavbar();
+  const nb=S.navbar;
+  document.getElementById('propTitle').textContent='滑动导航栏';
+  let h='';
+  h+=`<div class="fg"><label>启用</label>
+    <div class="mat-row">
+      <button class="mbtn ${nb.on?'on':''}" onclick="navSet('on',true)">开</button>
+      <button class="mbtn ${!nb.on?'on':''}" onclick="navSet('on',false)">关</button>
+    </div></div>`;
+  h+=`<div class="fg"><label>样式</label>
+    <div class="mat-row">
+      <button class="mbtn ${nb.style==='pill'?'on':''}" onclick="navSet('style','pill')">胶囊</button>
+      <button class="mbtn ${nb.style==='bar'?'on':''}" onclick="navSet('style','bar')">经典</button>
+      <button class="mbtn ${nb.style==='floating'?'on':''}" onclick="navSet('style','floating')">悬浮</button>
+    </div></div>`;
+  h+=`<div class="fg"><label>主色（留空跟随主题）</label>
+    <div class="color-row">
+      <div class="color-cell">
+        <span>导航主色</span>
+        <input type="color" value="${nb.color||S.color||'#6750A4'}" oninput="navSet('color',this.value)">
+        ${nb.color?`<button class="clr-clear" onclick="navSet('color','')">✕</button>`:''}
+      </div>
+    </div></div>`;
+  // 显示屏幕多选
+  h+=`<div class="fg"><label>显示屏幕（不选=全部）</label>
+    <div class="screen-chk">`;
+  S.screens.forEach(s=>{
+    const on=(nb.screens||[]).includes(s.id);
+    h+=`<button class="mbtn ${on?'on':''}" style="justify-content:flex-start;"
+      onclick="navToggleScreen('${s.id}')">${on?'☑':'☐'} ${esc(s.name)}</button>`;
+  });
+  h+=`</div></div>`;
+  // 按钮列表
+  h+=`<div class="fg"><label>按钮（${(nb.items||[]).length} 个）</label>
+    <button class="mbtn" style="width:100%;margin-bottom:6px;" onclick="navAddItem()">➕ 添加按钮</button>`;
+  (nb.items||[]).forEach((it,i)=>{
+    const tgt=S.screens.find(s=>s.id===it.screenId);
+    h+=`<div class="nav-item-row">
+      <span class="nav-item-ico">${it.icon||'●'}</span>
+      <div class="nav-item-info">
+        <input type="text" value="${esc(it.label||'')}" placeholder="名称"
+          oninput="navItemSet(${i},'label',this.value)">
+        <select onchange="navItemSet(${i},'screenId',this.value)">
+          <option value="">不关联屏幕</option>
+          ${S.screens.map(s=>`<option value="${s.id}" ${it.screenId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="nav-item-btns">
+        <button class="mbtn" style="padding:6px 8px;" onclick="navPickIcon(${i})">😀</button>
+        <button class="mbtn" style="padding:6px 8px;" onclick="navMoveItem(${i},-1)" ${i===0?'disabled':''}>↑</button>
+        <button class="mbtn" style="padding:6px 8px;" onclick="navMoveItem(${i},1)" ${i===(nb.items.length-1)?'disabled':''}>↓</button>
+        <button class="mbtn" style="padding:6px 8px;color:var(--err);" onclick="navDelItem(${i})" ${(nb.items||[]).length<=1?'disabled':''}>✕</button>
+      </div>
+    </div>`;
+  });
+  h+=`</div>`;
+  h+=`<div class="acts"><button class="bcancel" onclick="closeAllPanels()">完成</button></div>`;
+  document.getElementById('propBody').innerHTML=h;
+  openSheet('propSheet');
+}
+function navSet(k,v){
+  if(!S.navbar)S.navbar=defaultNavbar();
+  S.navbar[k]=v;persist();renderNavbarInto();openNavbarProps();
+}
+function navToggleScreen(sid){
+  if(!S.navbar)S.navbar=defaultNavbar();
+  const arr=S.navbar.screens||(S.navbar.screens=[]);
+  const i=arr.indexOf(sid);
+  if(i>=0)arr.splice(i,1);else arr.push(sid);
+  persist();renderNavbarInto();openNavbarProps();
+}
+function navAddItem(){
+  if(!S.navbar)S.navbar=defaultNavbar();
+  const n=(S.navbar.items||[]).length+1;
+  S.navbar.items.push({id:'nv'+Date.now().toString(36),icon:'⭐',label:'按钮'+n,screenId:''});
+  persist();renderNavbarInto();openNavbarProps();
+}
+function navDelItem(i){
+  if(!S.navbar)S.navbar=defaultNavbar();
+  if((S.navbar.items||[]).length<=1)return;
+  S.navbar.items.splice(i,1);
+  if(S.navbar.cur>=S.navbar.items.length)S.navbar.cur=0;
+  persist();renderNavbarInto();openNavbarProps();
+}
+function navMoveItem(i,dir){
+  const arr=S.navbar.items;const j=i+dir;
+  if(j<0||j>=arr.length)return;
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+  persist();renderNavbarInto();openNavbarProps();
+}
+function navItemSet(i,k,v){
+  if(!S.navbar||!S.navbar.items[i])return;
+  S.navbar.items[i][k]=v;persist();renderNavbarInto();openNavbarProps();
+}
+function navPickIcon(i){
+  const cur=(S.navbar.items[i]||{}).icon||'';
+  const v=prompt('输入 Emoji 图标',cur);
+  if(v!=null&&String(v).trim())navItemSet(i,'icon',String(v).trim());
+}
 
 const TYPES=[
   {t:'button',i:'🔘',n:'按钮',w:110,h:44,g:'按钮',d:{text:'按钮',toggle:false,on:false}},
@@ -1342,6 +1635,7 @@ function persist(){
       connections:S.connections,
       linkNoteMode:S.linkNoteMode,linkNoteLimit:S.linkNoteLimit,
       btnDefaults:S.btnDefaults,
+      navbar:S.navbar,
       bg:document.getElementById('canvas')?.classList.contains('has-bg')?'colorful':'plain'
     }));
   }catch(e){}
@@ -1360,7 +1654,8 @@ function restore(){
       connections:d.connections||[],
       linkNoteMode:d.linkNoteMode||'full',
       linkNoteLimit:d.linkNoteLimit||20,
-    });
+      navbar:d.navbar?Object.assign(defaultNavbar(),d.navbar):defaultNavbar(),
+});
     if(d.btnDefaults)S.btnDefaults=d.btnDefaults;
     S.screens.forEach(s=>{if(!s.parts)s.parts=[];if(s.sel===undefined)s.sel=null;});
     if(!scr())S.cur=S.screens[0].id;
@@ -1523,6 +1818,7 @@ function renderCanvas(){
   el.appendChild(svg);
   el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);
   bindParts();bindCarousels();updateFloatBar();updateLinkLayer();
+  renderNavbarInto();
 }
 function matInlineStyle(p){
   if(p.material==='glass'){
@@ -2095,6 +2391,7 @@ const SIDEBAR_CFG=[
   ]},
   {id:'view',i:'👁',t:'视图',items:[
     {id:'view:preview',i:'▶',t:'运行模式',action:togglePreview},
+    {id:'view:navbar',i:'📱',t:'滑动导航栏',action:openNavbarProps},
     {id:'view:grid',i:'▦',t:'显示/隐藏网格',action:toggleGrid},
     {id:'view:layers',i:'☰',t:'图层面板',action:()=>toggleLayers()},
     {id:'view:add',i:'➕',t:'添加组件面板',action:toggleAddPanel},
@@ -2169,7 +2466,7 @@ function filterSidebar(v){
 }
 function sbRun(id){
   const closeFirst=['screen:new','screen:dup','screen:rename','screen:del','screen:clear','screen:tpl',
-    'theme:open','view:layers','view:preview','view:resource','view:add','link:toggle','set:open'];
+    'theme:open','view:layers','view:preview','view:resource','view:add','view:navbar','link:toggle','set:open'];
   if(closeFirst.includes(id))closeAllPanels();
   for(const g of SIDEBAR_CFG){
     const it=g.items.find(x=>x.id===id);
@@ -2327,12 +2624,33 @@ function useResource(i){
 
 function exportJSON(){
   const data=JSON.stringify({
-    screens:S.screens,shape:S.shape,color:S.color,font:S.font,
-    connections:S.connections
+    v:22,
+    screens:S.screens,nid:S.nid,cur:S.cur,
+    shape:S.shape,color:S.color,font:S.font,
+    screenSize:S.screenSize,gridSize:S.gridSize,snapStrength:S.snapStrength,
+    canvasBg:document.getElementById('canvas')?.classList.contains('has-bg')?'colorful':'plain',
+    linkNoteMode:S.linkNoteMode,
+    resources:S.resources,
+    connections:S.connections,
+    navbar:S.navbar
   },null,2);
   const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download='m3canvas-'+Date.now()+'.json';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+/* 扫描工程内所有组件 id（含嵌套 fold-list / pageview），返回最大编号+1，避免导入后 id 冲突 */
+function computeMaxNid(){
+  let max=0;
+  const scanParts=(parts)=>{
+    (parts||[]).forEach(p=>{
+      const n=parseInt(String(p.id||'').replace(/^p/,''),10);
+      if(!isNaN(n)&&n>max)max=n;
+      if(p.type==='fold-list')(p.items||[]).forEach(it=>scanParts(it.parts));
+      if(p.type==='pageview')(p.pages||[]).forEach(pg=>scanParts(pg.parts));
+    });
+  };
+  (S.screens||[]).forEach(s=>scanParts(s.parts));
+  return max+1;
 }
 function importJSON(){
   const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
@@ -2342,14 +2660,55 @@ function importJSON(){
     reader.onload=ev=>{
       try{
         const d=JSON.parse(ev.result||ev.target.result);
-        if(!d.screens)throw new Error('格式错误');
+        if(!d.screens||!Array.isArray(d.screens)||!d.screens.length)throw new Error('格式错误：缺少 screens');
+        // 规范化每个屏幕
         S.screens=d.screens;
-        if(d.shape)S.shape=d.shape;if(d.color)S.color=d.color;if(d.font)S.font=d.font;
-        if(d.connections)S.connections=d.connections;
-        S.screens.forEach(s=>{if(!s.parts)s.parts=[];if(s.sel===undefined)s.sel=null;});
-        S.cur=S.screens[0].id;S.sel=null;
+        S.screens.forEach(s=>{
+          if(!s.id)s.id='s'+Math.random().toString(36).slice(2,8);
+          if(!s.parts)s.parts=[];
+          if(s.sel===undefined)s.sel=null;
+        });
+        // 恢复设置（缺省时用安全默认值，兼容旧存档）
+        if(d.shape)S.shape=d.shape;
+        if(d.color)S.color=d.color;
+        if(d.font)S.font=d.font;
+        if(d.screenSize&&SIZE_MAP[d.screenSize])S.screenSize=d.screenSize;
+        if(typeof d.gridSize==='number')S.gridSize=d.gridSize;
+        if(typeof d.snapStrength==='number')S.snapStrength=d.snapStrength;
+        if(d.linkNoteMode)S.linkNoteMode=d.linkNoteMode;
+        if(Array.isArray(d.connections))S.connections=d.connections;
+        else S.connections=[];
+        if(Array.isArray(d.resources))S.resources=d.resources;
+        if(d.navbar)S.navbar=Object.assign(defaultNavbar(),d.navbar);
+        // 关键：恢复 nid；缺失或过小时用全工程最大编号兜底，避免新组件 id 冲突
+        const maxNid=computeMaxNid();
+        S.nid=(typeof d.nid==='number'&&d.nid>=maxNid)?d.nid:maxNid;
+        // 恢复当前屏幕（找不到则回退第一屏）
+        S.cur=(d.cur&&S.screens.some(x=>x.id===d.cur))?d.cur:S.screens[0].id;
+        S.sel=null;
         if(S.editingPage)exitPageEdit();
-        renderAll();saveHist();alert('导入成功');
+        // 重置历史，避免撤销穿越导入
+        S.hist=[];S.hi=-1;
+        renderAll();
+        if(d.canvasBg==='colorful'){
+          const c=document.getElementById('canvas');
+          if(c)c.classList.add('has-bg');
+          const cb=document.getElementById('canvasBg2');
+          if(cb)cb.value='colorful';
+        }else{
+          const c=document.getElementById('canvas');
+          if(c)c.classList.remove('has-bg');
+          const cb=document.getElementById('canvasBg2');
+          if(cb)cb.value='plain';
+        }
+        // 同步设置面板控件
+        const g2=document.getElementById('gridSize2');if(g2)g2.value=S.gridSize;
+        setSnapStrength(snapLevelFromPx(S.snapStrength));
+        const ss2=document.getElementById('screenSize2');if(ss2)ss2.value=S.screenSize;
+        applyTheme&&applyTheme(S.color,true);
+        applyFont&&applyFont(S.font,true);
+        saveHist();
+        alert('导入成功');
       }catch(err){alert('导入失败：'+err.message);}
     };
     reader.readAsText(f);
@@ -3496,7 +3855,7 @@ function addScr(){
 }
 
 function applyTheme(){setThemeColor(document.getElementById('themeColor').value);}
-function setThemeColor(c){
+function setThemeColor(c,silent){
   S.color=c;
   const r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);
   const light=`rgb(${Math.min(255,r+170)},${Math.min(255,g+170)},${Math.min(255,b+170)})`;
@@ -3504,9 +3863,9 @@ function setThemeColor(c){
   const root=document.documentElement.style;
   root.setProperty('--pri',c);root.setProperty('--pri-c',light);
   root.setProperty('--on-pri-c',dark);root.setProperty('--sec-c',light);
-  document.getElementById('themeColor').value=c;
+  const tc=document.getElementById('themeColor');if(tc)tc.value=c;
   document.querySelectorAll('.preset-chip').forEach(el=>el.classList.toggle('on',el.dataset.c===c));
-  saveHist();renderCanvas();
+  if(!silent){saveHist();renderCanvas();}
 }
 function toggleCanvasBg(v){
   if(v===undefined||v===null){
@@ -3524,13 +3883,13 @@ function setShape(s){
     b.classList.toggle('on',b.dataset.s===s));
   saveHist();renderCanvas();
 }
-function applyFont(v){
+function applyFont(v,silent){
   const f=v||S.font||'Roboto';S.font=f;
   const map={'Roboto':"'Roboto',sans-serif",'Roboto Flex':"'Roboto Flex',sans-serif",'Roboto Serif':"'Roboto Serif',serif",'system':"-apple-system,'PingFang SC',sans-serif"};
   document.documentElement.style.setProperty('--font',map[f]||map['Roboto']);
   const sel=document.getElementById('fontSel2');
   if(sel)sel.value=f;
-  saveHist();renderCanvas();
+  if(!silent){saveHist();renderCanvas();}
 }
 
 document.addEventListener('touchstart',e=>{
@@ -3638,6 +3997,7 @@ function init(){
   document.getElementById('presetGrid').innerHTML=PRESETS.map(p=>
     `<div class="preset-chip" data-c="${p.c}" title="${p.n}" style="background:${p.c}" onclick="setThemeColor('${p.c}')"></div>`).join('');
   restore();
+  if(!S.navbar)S.navbar=defaultNavbar();   // 无存档时兜底初始化导航栏
   document.getElementById('themeColor').value=S.color;
   const r=parseInt(S.color.slice(1,3),16),g=parseInt(S.color.slice(3,5),16),b=parseInt(S.color.slice(5,7),16);
   const root=document.documentElement.style;
