@@ -469,6 +469,7 @@ body.preview .part.locked::after{display:none;}
   transition:background .2s;}
 .fold-list .fl-head:active{background:var(--sur-v);}
 .fold-list .fl-item.open .fl-head{background:var(--sec-c);color:var(--on-sec-c);font-weight:600;}
+.fold-list .fl-head .fl-icon{font-size:16px;flex:0 0 auto;line-height:1;}
 .fold-list .fl-head .fl-title{flex:1;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;}
 .fold-list .fl-head .fl-arrow{font-size:12px;transition:transform .2s;
@@ -476,8 +477,31 @@ body.preview .part.locked::after{display:none;}
 .fold-list .fl-item.open .fl-head .fl-arrow{transform:rotate(90deg);}
 .fold-list .fl-body{max-height:0;overflow:hidden;
   transition:max-height .25s ease;background:var(--sur);
-  font-size:12px;color:var(--on-sur-v);line-height:1.5;}
+  font-size:12px;color:var(--on-sur-v);line-height:1.5;position:relative;}
 .fold-list .fl-item.open .fl-body{max-height:400px;padding:10px 14px;}
+.fold-list .fl-body .fl-text{margin-bottom:6px;}
+.fold-list .fl-body .fl-parts{display:flex;flex-direction:column;gap:6px;}
+.fold-list .fl-body .fl-empty{font-size:11px;color:var(--out);
+  border:1px dashed var(--out-v);border-radius:6px;padding:10px;text-align:center;}
+/* 子组件在折叠项内：由绝对定位转为流式排布 */
+.fold-list .fl-body .part.sub-part{position:relative!important;
+  left:auto!important;top:auto!important;
+  transform:none!important;margin:0 auto;}
+/* 折叠列表样式变体 */
+.fold-list.fl-flush{border:none;border-radius:0;background:transparent;}
+.fold-list.fl-flush .fl-item{border-bottom:1px solid var(--out-v);}
+.fold-list.fl-flush .fl-item:last-child{border-bottom:none;}
+.fold-list.fl-card{background:transparent;border:none;gap:8px;
+  display:flex;flex-direction:column;padding:0;}
+.fold-list.fl-card .fl-item{border:1px solid var(--out-v);
+  border-radius:var(--r-md);background:var(--sur);overflow:hidden;}
+.fold-list.fl-card .fl-item:last-child{border-bottom:1px solid var(--out-v);}
+.fold-list.fl-card .fl-item.open{box-shadow:0 2px 10px rgba(0,0,0,.08);}
+.fold-list.fl-filled{background:var(--sur-v);border:none;}
+.fold-list.fl-filled .fl-item{border-bottom:none;}
+.fold-list.fl-filled .fl-head{border-radius:var(--r-sm);margin:2px;}
+.fold-list.fl-filled .fl-item.open .fl-head{background:var(--sec-c);}
+.fold-list.fl-filled .fl-body{background:transparent;}
 .timeline{flex-direction:column;align-items:stretch;padding:10px 14px;
   background:var(--sur);gap:14px;overflow:visible!important;}
 .timeline .tl-item{display:flex;gap:10px;position:relative;}
@@ -1011,11 +1035,12 @@ const TYPES=[
   {t:'slider',i:'🎚️',n:'滑块',w:200,h:24,g:'输入',d:{value:60}},
   {t:'card',i:'🃏',n:'卡片',w:180,h:90,g:'展示',d:{text:'卡片内容'}},
   {t:'list-item',i:'📋',n:'列表项',w:300,h:56,g:'展示',d:{text:'列表标题',sub:'副标题文字',icon:'📁'}},
-  {t:'fold-list',i:'📂',n:'折叠列表',w:300,h:180,g:'展示',d:{
+  {t:'fold-list',i:'📂',n:'折叠列表',w:300,h:240,g:'展示',d:{
+    style:'list',
     items:[
-      {title:'标题 1',content:'内容说明文字',open:false},
-      {title:'标题 2',content:'内容说明文字',open:false},
-      {title:'标题 3',content:'内容说明文字',open:false},
+      {title:'标题 1',content:'内容说明文字',icon:'📁',open:true,parts:[]},
+      {title:'标题 2',content:'内容说明文字',icon:'📄',open:false,parts:[]},
+      {title:'标题 3',content:'内容说明文字',icon:'⚙️',open:false,parts:[]},
     ]}},
   {t:'avatar',i:'👤',n:'头像',w:48,h:48,g:'展示',d:{text:'AB'}},
   {t:'badge',i:'🔴',n:'徽章',w:26,h:22,g:'展示',d:{text:'3'}},
@@ -1090,30 +1115,48 @@ function _dialogCancel(){
   document.getElementById('dialogModal').classList.remove('open');
   if(_dialogResolve){_dialogResolve(false);_dialogResolve=null;}
 }
-
 function getEditParts(){
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    if(!pager||pager.type!=='pageview')return null;
-    const pg=(pager.pages||[])[S.editingPage.pageIdx];
-    if(!pg)return null;
-    if(!pg.parts)pg.parts=[];
-    return pg.parts;
+    const owner=byId(S.editingPage.pagerId);
+    if(!owner)return null;
+    if(owner.type==='pageview'){
+      const pg=(owner.pages||[])[S.editingPage.pageIdx];
+      if(!pg)return null;
+      if(!pg.parts)pg.parts=[];
+      return pg.parts;
+    }
+    if(owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      if(!it)return null;
+      if(!it.parts)it.parts=[];
+      return it.parts;
+    }
+    return null;
   }
   const s=scr();
   return s?s.parts:null;
 }
 function getCanvasSize(){
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    if(pager)return {w:pager.w,h:pager.h};
+    const owner=byId(S.editingPage.pagerId);
+    if(owner)return {w:owner.w,h:owner.h};
   }
   return SIZE_MAP[S.screenSize];
 }
+
 function enterPageEdit(pagerId,pageIdx){
   if(S.preview)return;
   if(S.linkMode){alert('请先退出连线模式');return;}
   S.editingPage={pagerId,pageIdx};
+  S.sel=null;
+  closeAllPanels();
+  renderAll();
+}
+/* 进入折叠列表某一项的"内容编辑"（可往里面放任意组件） */
+function enterFoldEdit(foldId,itemIdx){
+  if(S.preview)return;
+  if(S.linkMode){alert('请先退出连线模式');return;}
+  S.editingPage={pagerId:foldId,itemIdx};
   S.sel=null;
   closeAllPanels();
   renderAll();
@@ -1355,12 +1398,21 @@ function updateTitleBar(){
     linkTip.classList.remove('on');
   }
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    const pg=(pager?.pages||[])[S.editingPage.pageIdx];
-    info.textContent=`📄 ${pg?.name||'页面'} · ${(pg?.parts||[]).length} 个组件`;
+    const owner=byId(S.editingPage.pagerId);
+    let label='';
+    if(owner&&owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      label=`📂 ${it?.title||'列表项'}`;
+      info.textContent=`${label} · ${(it?.parts||[]).length} 个组件`;
+      document.getElementById('title').textContent=`${it?.title||'列表项'}`;
+    }else{
+      const pg=(owner?.pages||[])[S.editingPage.pageIdx];
+      label=`📄 ${pg?.name||'页面'}`;
+      info.textContent=`${label} · ${(pg?.parts||[]).length} 个组件`;
+      document.getElementById('title').textContent=`${pg?.name||'页面'}`;
+    }
     bar.classList.add('on');
     document.getElementById('canvas').classList.add('page-edit');
-    document.getElementById('title').textContent=`${pg?.name||'页面'}`;
   }else{
     bar.classList.remove('on');
     document.getElementById('canvas').classList.remove('page-edit');
@@ -1385,10 +1437,15 @@ function renderCanvas(){
   if(S.editingPage){
     const parts=getEditParts()||[];
     html=parts.map(p=>renderPart(p,PV)).join('');
-    const pager=byId(S.editingPage.pagerId);
-    const pg=(pager?.pages||[])[S.editingPage.pageIdx];
-    if(pg&&pg.color){el.style.background=pg.color;}
-    else{el.style.background='';}
+    const owner=byId(S.editingPage.pagerId);
+    if(owner&&owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      el.style.background=it?.color||'';
+    }else{
+      const pg=(owner?.pages||[])[S.editingPage.pageIdx];
+      if(pg&&pg.color){el.style.background=pg.color;}
+      else{el.style.background='';}
+    }
   }else{
     if(!s){el.innerHTML='';el.appendChild(svg);el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);return;}
     el.style.background='';
@@ -1467,15 +1524,30 @@ function renderPart(p,PV){
     case 'list-item':return `<div class="${cls('li')}" data-id="${p.id}" style="${st}"><span class="lc">${d.icon||'📁'}</span><span class="lt"><span ${f('text')}>${esc(d.text||'列表标题')}</span><small ${f('sub')}>${esc(d.sub||'')}</small></span><span class="ar">›</span></div>`;
     case 'fold-list':{
       const items=d.items||[];
-      return `<div class="${cls('fold-list')}" data-id="${p.id}" style="${st}border-radius:${R(12)}">
-        ${items.map((it,i)=>`
+      const style=d.style||'list';
+      // 不同样式：list(普通) / card(卡片) / flush(无边框) / filled(填充)
+      const wrapCls='fold-list fl-'+style;
+      return `<div class="${cls(wrapCls)}" data-id="${p.id}" style="${st}border-radius:${R(12)}">
+        ${items.map((it,i)=>{
+          const hasContent=(it.content&&it.content.trim());
+          const hasParts=(it.parts&&it.parts.length);
+          let inner='';
+          if(hasContent)inner+=`<div class="fl-text">${esc(it.content)}</div>`;
+          if(hasParts)inner+=`<div class="fl-parts">${it.parts.map(sp=>renderSubPart(sp,PV)).join('')}</div>`;
+          if(!hasContent&&!hasParts){
+            inner=`<div class="fl-empty">${PV?'':'双击此列表项添加内容组件'}</div>`;
+          }
+          const dblAttr=PV?'':`ondblclick="enterFoldEdit('${p.id}',${i})"`;
+          return `
           <div class="fl-item ${it.open?'open':''}">
             <div class="fl-head" onclick="toggleFold(event,'${p.id}',${i})">
+              ${it.icon?`<span class="fl-icon">${it.icon}</span>`:''}
               <span class="fl-title">${esc(it.title||'标题 '+(i+1))}</span>
               <span class="fl-arrow">›</span>
             </div>
-            <div class="fl-body">${esc(it.content||'')}</div>
-          </div>`).join('')}
+            <div class="fl-body" ${dblAttr}>${inner}</div>
+          </div>`;
+        }).join('')}
       </div>`;
     }
     case 'avatar':return `<div class="${cls('av')}" data-id="${p.id}" style="${st}"><span ${f('text')}>${esc(d.text||'AB')}</span></div>`;
@@ -1692,12 +1764,18 @@ function renderLayers(){
   const title=document.getElementById('layerTitle');
   if(!s){el.innerHTML='';return;}
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    const pg=(pager?.pages||[])[S.editingPage.pageIdx];
-    title.textContent=`图层 · ${pg?.name||'页面'}`;
-    const parts=pg?.parts||[];
+    const owner=byId(S.editingPage.pagerId);
+    let parts=[],name='';
+    if(owner&&owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      parts=it?.parts||[];name=it?.title||'列表项';
+    }else{
+      const pg=(owner?.pages||[])[S.editingPage.pageIdx];
+      parts=pg?.parts||[];name=pg?.name||'页面';
+    }
+    title.textContent=`图层 · ${name}`;
     if(!parts.length){
-      el.innerHTML=`<div class="sb-empty">此页面还没有组件<br><br>点右下角 ＋ 添加</div>`;
+      el.innerHTML=`<div class="sb-empty">此${owner?.type==='fold-list'?'列表项':'页面'}还没有组件<br><br>点右下角 ＋ 添加</div>`;
       return;
     }
     el.innerHTML=[...parts].reverse().map(p=>{
@@ -1781,9 +1859,16 @@ function renderAddPanel(filter){
   const titleEl=document.getElementById('addPanelTitle');
   if(!body)return;
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    const pg=(pager?.pages||[])[S.editingPage.pageIdx];
-    titleEl.textContent='添加组件 · '+(pg?.name||'页面');
+    const owner=byId(S.editingPage.pagerId);
+    let nm='';
+    if(owner&&owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      nm=it?.title||'列表项';
+    }else{
+      const pg=(owner?.pages||[])[S.editingPage.pageIdx];
+      nm=pg?.name||'页面';
+    }
+    titleEl.textContent='添加组件 · '+nm;
   }else{
     titleEl.textContent='添加组件';
   }
@@ -2016,12 +2101,21 @@ async function delScr(){
 }
 async function clearScreen(){
   if(S.editingPage){
-    const pager=byId(S.editingPage.pagerId);
-    const pg=(pager?.pages||[])[S.editingPage.pageIdx];
-    if(!pg)return;
-    const ok=await customConfirm('清空页面','清空当前页面所有组件？');
-    if(!ok)return;
-    pg.parts=[];
+    const owner=byId(S.editingPage.pagerId);
+    if(!owner)return;
+    if(owner.type==='fold-list'){
+      const it=(owner.items||[])[S.editingPage.itemIdx];
+      if(!it)return;
+      const ok=await customConfirm('清空内容','清空当前列表项所有组件？');
+      if(!ok)return;
+      it.parts=[];
+    }else{
+      const pg=(owner.pages||[])[S.editingPage.pageIdx];
+      if(!pg)return;
+      const ok=await customConfirm('清空页面','清空当前页面所有组件？');
+      if(!ok)return;
+      pg.parts=[];
+    }
     S.sel=null;
     renderAll();saveHist();
     return;
@@ -2907,6 +3001,13 @@ function openProp(id){
   }
   if(p.type==='bottom-nav')h+=`<div class="fg"><label>导航项（图标,名称，每行）</label><textarea onchange="updateNavItems('${p.id}',this.value)">${(p.items||[]).map(it=>`${it[0]},${it[1]}`).join('\n')}</textarea></div>`;
   if(p.type==='fold-list'){
+    h+=`<div class="fg"><label>列表样式</label>
+      <div class="mat-row">
+        <button class="mbtn ${(!p.style||p.style==='list')?'on':''}" onclick="setFoldStyle('${p.id}','list')">普通</button>
+        <button class="mbtn ${p.style==='card'?'on':''}" onclick="setFoldStyle('${p.id}','card')">卡片</button>
+        <button class="mbtn ${p.style==='flush'?'on':''}" onclick="setFoldStyle('${p.id}','flush')">通栏</button>
+        <button class="mbtn ${p.style==='filled'?'on':''}" onclick="setFoldStyle('${p.id}','filled')">填充</button>
+      </div></div>`;
     h+=`<div class="fg"><label>列表项管理</label>
       <button class="mbtn" style="width:100%;margin-bottom:6px;"
         onclick="addFoldItem('${p.id}')">➕ 添加列表项</button>`;
@@ -2916,6 +3017,8 @@ function openProp(id){
           color:var(--on-sur-v);">#${i+1}</span>
         <button class="mbtn" style="flex:1;padding:6px 0;font-size:11px;"
           onclick="editFoldItem('${p.id}',${i})">编辑</button>
+        <button class="mbtn" style="flex:1;padding:6px 0;font-size:11px;"
+          onclick="enterFoldEdit('${p.id}',${i})">内容</button>
         <button class="mbtn" style="width:32px;color:var(--err);"
           onclick="delFoldItem('${p.id}',${i})">✕</button>
       </div>`).join('');
@@ -3080,10 +3183,14 @@ function updateNavItems(id,v){const parts=getEditParts();if(!parts)return;const 
 function updateTlItems(id,v){const parts=getEditParts();if(!parts)return;const p=parts.find(x=>x.id===id);if(!p)return;p.items=v.split('\n').filter(x=>x.trim()).map(l=>{const a=l.split('|');return [a[0]?.trim()||'标题',a[1]?.trim()||''];});updatePartEl(p);saveHist();}
 
 /* 折叠列表项管理 */
+function setFoldStyle(id,s){
+  const parts=getEditParts();const p=parts?.find(x=>x.id===id);if(!p)return;
+  p.style=s;updatePartEl(p);saveHist();openProp(id);
+}
 function addFoldItem(id){
   const parts=getEditParts();const p=parts?.find(x=>x.id===id);if(!p)return;
   if(!p.items)p.items=[];
-  p.items.push({title:'新项目',content:'内容说明',open:false});
+  p.items.push({title:'新项目',content:'',icon:'',open:false,parts:[]});
   updatePartEl(p);saveHist();openProp(id);
 }
 function delFoldItem(id,i){
@@ -3098,9 +3205,15 @@ function editFoldItem(id,i){
     <div class="fg"><label>标题</label>
       <input type="text" value="${esc(it.title||'')}"
         oninput="_foldSet('${id}',${i},'title',this.value)"></div>
-    <div class="fg"><label>内容</label>
+    <div class="fg"><label>图标（emoji，可留空）</label>
+      <input type="text" value="${esc(it.icon||'')}" placeholder="如 📁 📄 ⚙️"
+        oninput="_foldSet('${id}',${i},'icon',this.value)"></div>
+    <div class="fg"><label>文字内容（可选）</label>
       <textarea onchange="_foldSet('${id}',${i},'content',this.value)"
         >${esc(it.content||'')}</textarea></div>
+    <div class="fg"><label>内容组件（${(it.parts||[]).length} 个）</label>
+      <button class="mbtn" style="width:100%"
+        onclick="enterFoldEdit('${id}',${i})">🧩 进入内容编辑</button></div>
     <div class="fg"><label>默认展开</label>
       <div class="mat-row">
         <button class="mbtn ${!it.open?'on':''}"
@@ -3115,6 +3228,7 @@ function editFoldItem(id,i){
 }
 function _foldSet(id,i,k,v){
   const parts=getEditParts();const p=parts?.find(x=>x.id===id);if(!p)return;
+  if(!p.items[i])return;
   p.items[i][k]=v;updatePartEl(p);saveHist();
 }
 
