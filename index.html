@@ -887,12 +887,13 @@ body.preview .preview-tip{display:block;}
       <option value="32">32px</option>
       <option value="0">不显示网格</option>
     </select></div>
-  <div class="fg"><label>吸附强度</label>
-    <select id="snapStrength2" onchange="setSnapStrength(this.value)">
-      <option value="3">紧 3px</option>
-      <option value="7">中 7px</option>
-      <option value="12">松 12px</option>
-    </select></div>
+  <div class="fg"><label>吸附松紧：<b id="snapStrengthLabel">适中</b></label>
+    <input type="range" id="snapStrength2" min="0" max="2" step="1" value="1"
+      oninput="setSnapStrength(this.value)">
+    <div style="display:flex;justify-content:space-between;
+      font-size:10px;color:var(--on-sur-v);margin-top:2px;">
+      <span>严格</span><span>适中</span><span>开放</span>
+    </div></div>
   <div class="fg"><label>圆角风格</label>
     <div class="mat-row" id="shapeRow2">
       <button class="mbtn" data-s="rounded" onclick="setShape('rounded')">圆角</button>
@@ -1377,10 +1378,25 @@ function setGridSize(v){
     `linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px)`;
   c.style.backgroundSize=`${g}px ${g}px`;
 }
+/* 吸附松紧：滑条 0=严格 1=适中 2=开放，分别对应吸附半径 3/7/12px */
+const SNAP_LEVELS=[
+  {name:'严格',px:3},
+  {name:'适中',px:7},
+  {name:'开放',px:12},
+];
+function snapLevelFromPx(px){
+  let best=1,min=Infinity;
+  SNAP_LEVELS.forEach((lv,i)=>{const d=Math.abs(lv.px-px);if(d<min){min=d;best=i;}});
+  return best;
+}
 function setSnapStrength(v){
-  S.snapStrength=+v;persist();
+  const idx=Math.max(0,Math.min(2,Math.round(+v)));
+  S.snapStrength=SNAP_LEVELS[idx].px;
+  persist();
   const s2=document.getElementById('snapStrength2');
-  if(s2)s2.value=v;
+  if(s2&&+s2.value!==idx)s2.value=idx;
+  const lb=document.getElementById('snapStrengthLabel');
+  if(lb)lb.textContent=SNAP_LEVELS[idx].name;
 }
 
 function renderAll(){
@@ -1985,9 +2001,9 @@ const SIDEBAR_CFG=[
   {id:'settings',i:'⚙',t:'设置',items:[
     {id:'set:open',i:'⚙',t:'打开设置面板',action:()=>toggleSheet('settingsSheet')},
     {id:'set:grid',i:'▦',t:'显示/隐藏网格',action:toggleGrid},
-    {id:'set:snap',i:'🧲',t:'吸附：紧',action:()=>{setSnapStrength('3');}},
-    {id:'set:snap2',i:'🧲',t:'吸附：中',action:()=>{setSnapStrength('7');}},
-    {id:'set:snap3',i:'🧲',t:'吸附：松',action:()=>{setSnapStrength('12');}},
+    {id:'set:snap',i:'🧲',t:'吸附：严格',action:()=>{setSnapStrength('0');}},
+    {id:'set:snap2',i:'🧲',t:'吸附：适中',action:()=>{setSnapStrength('1');}},
+    {id:'set:snap3',i:'🧲',t:'吸附：开放',action:()=>{setSnapStrength('2');}},
     {id:'set:clearconn',i:'🧹',t:'清空所有连接',action:clearConnections,cond:()=>(S.connections||[]).length>0},
   ]},
   {id:'theme',i:'🎨',t:'外观',items:[
@@ -3509,7 +3525,7 @@ function init(){
   root.setProperty('--sec-c',`rgb(${Math.min(255,r+170)},${Math.min(255,g+170)},${Math.min(255,b+170)})`);
   document.getElementById('fontSel2').value=S.font;
   document.getElementById('gridSize2').value=S.gridSize;
-  document.getElementById('snapStrength2').value=S.snapStrength;
+  setSnapStrength(snapLevelFromPx(S.snapStrength));
   document.getElementById('screenSize2').value=S.screenSize;
   document.querySelectorAll('#shapeRow2 .mbtn').forEach(b=>b.classList.toggle('on',b.dataset.s===S.shape));
   document.querySelectorAll('.preset-chip').forEach(el=>el.classList.toggle('on',el.dataset.c===S.color));
