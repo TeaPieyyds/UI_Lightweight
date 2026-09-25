@@ -930,12 +930,14 @@ body.preview .preview-tip{display:block;}
   transition:color .25s;}
 .m3nav-bar .m3nav-item .m3nav-ico{font-size:20px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
 .m3nav-bar .m3nav-item .m3nav-lbl{font-size:10px;white-space:nowrap;opacity:.85;}
-.m3nav-bar .m3nav-item .m3nav-ind{position:absolute;top:0;left:50%;transform:translateX(-50%) scaleX(0);
-  width:26px;height:3px;border-radius:2px;background:var(--nav-pri);
-  transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+/* 经典样式：一条可滑动的指示条（随选中项平移，带过渡，不瞬移） */
+.m3nav-bar .m3nav-inner{position:relative;}
+.m3nav-bar .m3nav-slide-ind{position:absolute;top:0;height:3px;width:26px;
+  border-radius:2px;background:var(--nav-pri);z-index:2;pointer-events:none;
+  transform:translateX(-50%);
+  transition:left .34s cubic-bezier(.34,1.3,.5,1);}
 .m3nav-bar .m3nav-item.on{color:var(--nav-pri);}
 .m3nav-bar .m3nav-item.on .m3nav-ico{transform:scale(1.15) translateY(-2px);}
-.m3nav-bar .m3nav-item.on .m3nav-ind{transform:translateX(-50%) scaleX(1);}
 .m3nav-bar .m3nav-item:active{background:color-mix(in srgb,var(--nav-pri) 10%,transparent);}
 /* 悬浮样式 */
 .m3nav-floating{padding-bottom:calc(20px + env(safe-area-inset-bottom));}
@@ -1318,15 +1320,17 @@ function navItemsHtml(p){
   const items=p.items||[];
   const cur=Math.max(0,Math.min(items.length-1,p.cur||0));
   const sstyle=p.style||'pill';
-  const pill=`<div class="m3nav-pill" style="width:${100/Math.max(1,items.length)}%;transform:translateX(${cur*100}%)"></div>`;
+  const n=Math.max(1,items.length);
+  const pill=`<div class="m3nav-pill" style="width:${100/n}%;transform:translateX(${cur*100}%)"></div>`;
+  // 经典样式：一条指示条，按选中项居中定位（用 left 百分比 + translateX(-50%)）
+  const barInd=`<div class="m3nav-slide-ind" style="left:${((cur+0.5)/n*100).toFixed(4)}%"></div>`;
   const btn=(it,i,withLabel)=>`<button class="m3nav-item ${i===cur?'on':''}" data-idx="${i}"
       ${S.preview?`onclick="event.stopPropagation();navGo(event,'${p.id}',${i})"`:''}>
       <span class="m3nav-ico">${it.icon||'●'}</span>
       ${withLabel?`<span class="m3nav-lbl">${esc(it.label||'')}</span>`:''}
-      ${sstyle==='bar'?`<span class="m3nav-ind"></span>`:''}
     </button>`;
   if(sstyle==='bar'){
-    return `<div class="m3nav-inner">${items.map((it,i)=>btn(it,i,true)).join('')}</div>`;
+    return `<div class="m3nav-inner">${barInd}${items.map((it,i)=>btn(it,i,true)).join('')}</div>`;
   }
   return `<div class="m3nav-inner">${pill}${items.map((it,i)=>btn(it,i,sstyle!=='floating')).join('')}</div>`;
 }
@@ -2394,10 +2398,16 @@ function renderFixedNavbars(navParts){
 function syncNavInPlace(el,p){
   const items=p.items||[];
   const cur=Math.max(0,Math.min(items.length-1,p.cur||0));
+  const n=Math.max(1,items.length);
   const pill=el.querySelector('.m3nav-pill');
   if(pill){
-    pill.style.width=(100/Math.max(1,items.length))+'%';
+    pill.style.width=(100/n)+'%';
     pill.style.transform=`translateX(${cur*100}%)`;
+  }
+  // 经典样式：指示条随选中项平移（带过渡，丝滑不瞬移）
+  const ind=el.querySelector('.m3nav-slide-ind');
+  if(ind){
+    ind.style.left=((cur+0.5)/n*100).toFixed(4)+'%';
   }
   el.querySelectorAll('.m3nav-item').forEach((btn,i)=>{
     btn.classList.toggle('on',i===cur);
@@ -2670,12 +2680,12 @@ function renderPart(p,PV){
       };
       let bodyHtml='';
       if(sstyle==='bar'){
-        bodyHtml=`<div class="m3nav-inner">${items.map((it,i)=>`
+        const barInd=`<div class="m3nav-slide-ind" style="left:${((cur+0.5)/Math.max(1,items.length)*100).toFixed(4)}%"></div>`;
+        bodyHtml=`<div class="m3nav-inner">${barInd}${items.map((it,i)=>`
           <button class="m3nav-item ${i===cur?'on':''}" data-idx="${i}"
             ${PV?`onclick="event.stopPropagation();navGo(event,'${p.id}',${i})"`:''}>
             <span class="m3nav-ico">${it.icon||'●'}</span>
             <span class="m3nav-lbl">${esc(it.label||'')}</span>
-            <span class="m3nav-ind"></span>
           </button>`).join('')}</div>`;
       }else if(sstyle==='floating'){
         bodyHtml=inner(false);
