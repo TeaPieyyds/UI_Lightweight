@@ -1435,11 +1435,14 @@ function navEditingPart(){
 }
 function navSet(k,v){
   const p=navEditingPart();if(!p)return;
-  p[k]=v;persist();renderCanvas();openNavbarProps();
+  p[k]=v;persist();
+  // 结构/样式类需要重建面板；其余原地刷新画布，避免输入失焦
+  if(k==='style'||k==='anim'||k==='snap'){renderCanvas();openNavbarProps();renderFixedNavbarsNow();return;}
+  renderCanvas();renderFixedNavbarsNow();
 }
 function navGeom(k,v){
   const p=navEditingPart();if(!p)return;
-  p[k]=Math.max(0,+v||0);persist();renderCanvas();openNavbarProps();
+  p[k]=Math.max(0,+v||0);persist();renderCanvas();renderFixedNavbarsNow();
 }
 function navToggleScreen(sid){
   const p=navEditingPart();if(!p)return;
@@ -1470,7 +1473,7 @@ function navMoveItem(i,dir){
 }
 function navItemSet(i,k,v){
   const p=navEditingPart();if(!p||!p.items[i])return;
-  p.items[i][k]=v;persist();renderCanvas();openNavbarProps();
+  p.items[i][k]=v;persist();renderCanvas();renderFixedNavbarsNow();
 }
 function navPickIcon(i){
   const p=navEditingPart();if(!p)return;
@@ -1702,7 +1705,7 @@ function titleSet(k,v){
 }
 function titleGeom(k,v){
   const p=titleEditingPart();if(!p)return;
-  p[k]=Math.max(0,+v||0);persist();renderCanvas();openTitleProps();
+  p[k]=Math.max(0,+v||0);persist();renderCanvas();titleRefreshFixed();
 }
 function titleSnapTop(){
   const p=titleEditingPart();if(!p)return;
@@ -1780,13 +1783,16 @@ function spEditingPart(){
 }
 function spSet(k,v){
   const p=spEditingPart();if(!p)return;
-  p[k]=v;persist();renderCanvas();openScrollPageProps(p.id);
+  p[k]=v;persist();
+  // 结构类（样式）需要重建面板；其余原地更新，避免输入失焦
+  if(k==='style'){renderCanvas();openScrollPageProps(p.id);return;}
+  renderCanvas();
 }
 function spGeom(k,v){
   const p=spEditingPart();if(!p)return;
-  p[k]=Math.max(0,+v||0);persist();renderCanvas();openScrollPageProps(p.id);
+  p[k]=Math.max(0,+v||0);persist();
+  renderCanvas();   // 只刷新画布，不重建属性面板（保输入焦点）
 }
-
 
 const TYPES=[
   {t:'button',i:'🔘',n:'按钮',w:110,h:44,g:'按钮',d:{text:'按钮',toggle:false,on:false}},
@@ -3752,18 +3758,25 @@ function startInlineEdit(id,targetEl){
   drag.on=false;clearTimeout(drag.longT);drag.moved=false;
   const field=fieldEl.dataset.field,origText=p[field]||'';
   S.inlineEditing={id,el:fieldEl};
-  fieldEl.setAttribute('contenteditable','true');fieldEl.focus();
-  // 把光标/选区放到文字末尾并全选，方便直接改写
-  const range=document.createRange();range.selectNodeContents(fieldEl);
-  const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+  fieldEl.setAttribute('contenteditable','true');
+  // 编辑期间禁止元素平移/缩放等变换，避免 WebView 重排导致失焦
+  fieldEl.style.transform='none';
+  // 记录实时内容，避免依赖 blur 才提交
+  let cur=origText;
+  const commit=()=>{
+    const t=(fieldEl.textContent||'').trim();
+    if(t!==origText){p[field]=t;}
+  };
   const finish=()=>{
     if(fieldEl.getAttribute('contenteditable')!=='true')return;
     S.inlineEditing=null;
     fieldEl.removeAttribute('contenteditable');
-    const newText=fieldEl.textContent.trim();
-    if(newText!==origText){p[field]=newText;saveHist();}
+    commit();
+    saveHist();
     renderCanvas();renderLayers();
   };
+  // 输入时只暂存，不做任何 DOM 重建（防止输入法被顶掉）
+  fieldEl.addEventListener('input',()=>{cur=fieldEl.textContent;});
   fieldEl.addEventListener('blur',finish,{once:true});
   fieldEl.addEventListener('keydown',ev=>{
     if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();fieldEl.blur();}
@@ -3773,6 +3786,12 @@ function startInlineEdit(id,targetEl){
   fieldEl.addEventListener('touchstart',ev=>ev.stopPropagation(),{passive:true});
   fieldEl.addEventListener('mousedown',ev=>ev.stopPropagation());
   fieldEl.addEventListener('click',ev=>ev.stopPropagation());
+  fieldEl.focus();
+  // 把光标/选区放到文字上，方便直接改写
+  try{
+    const range=document.createRange();range.selectNodeContents(fieldEl);
+    const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+  }catch(e){}
 }
 
 function clearAllSelection(){
