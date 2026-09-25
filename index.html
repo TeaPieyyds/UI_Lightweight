@@ -4164,7 +4164,7 @@ function upProp(k,v){
     if(sel&&sel.value==='plain'){sel.value='colorful';document.getElementById('canvas').classList.add('has-bg');}
   }
   if(k==='imgMode')setTimeout(()=>openProp(p.id),0);
-  if(['variant','toggle','on','anim','material','autoplay','colorIdx','cardStyle','bgColor','fgColor','borderColor'].includes(k)){
+  if(['variant','toggle','on','anim','material','autoplay','colorIdx','cardStyle','textAlign','textVAlign','bgColor','fgColor','borderColor'].includes(k)){
     setTimeout(()=>openProp(p.id),0);
   }
   updateLinkLayer();
