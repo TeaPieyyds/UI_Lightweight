@@ -21,7 +21,7 @@ body.preview .topbar,body.preview .tabs,body.preview .bottombar,
 body.preview .fab,body.preview .floatbar,body.preview .multibar,
 body.preview .zoom-ctrl,body.preview .page-edit-bar,
 body.preview .link-layer{display:none!important;}
-body.preview .stage{padding:0;align-items:center;justify-content:center;}
+body.preview .stage{padding:0;align-items:flex-start;justify-content:center;overflow:auto;}
 body.preview .canvas{border-radius:0;box-shadow:none;}
 
 .topbar{flex:0 0 52px;display:flex;align-items:center;gap:4px;padding:0 8px;
@@ -2159,6 +2159,29 @@ function applyZoom(){
   const zv=document.getElementById('zoomVal');
   if(zv)zv.textContent=Math.round(S.zoom*100)+'%';
 }
+/* 编辑滚动页面时，画布与容器按内容高度延展；其余情况回到屏幕尺寸 */
+function syncCanvasExtent(){
+  const wrap=document.getElementById('canvasWrap');
+  const c=document.getElementById('canvas');
+  if(!wrap||!c)return;
+  let inScrollEdit=false;
+  if(S.editingPage){
+    const owner=byId(S.editingPage.pagerId);
+    if(owner&&owner.type==='scrollpage')inScrollEdit=true;
+  }
+  if(inScrollEdit){
+    const owner=byId(S.editingPage.pagerId);
+    const ch=Math.max(owner.contentH||400,owner.h);
+    c.style.height=ch+'px';
+    wrap.style.height=(ch*S.zoom)+'px';
+    c.classList.add('scroll-editing');
+  }else{
+    c.style.height='';
+    c.classList.remove('scroll-editing');
+    const size=getCanvasSize();
+    wrap.style.height=(size.h*S.zoom)+'px';
+  }
+}
 function zoomIn(){S.zoom=Math.min(2,+(S.zoom+0.1).toFixed(2));applyZoom();persist();}
 function zoomOut(){S.zoom=Math.max(0.25,+(S.zoom-0.1).toFixed(2));applyZoom();persist();}
 function setScreenSize(v){
@@ -2244,10 +2267,6 @@ function renderTabs(){
       onclick="switchScr('${s.id}')">${esc(s.name)}</button>`).join('')+
     `<button class="tab add" onclick="addScr()">＋</button>`;
 }
-function resetScrollEditCanvas(el,wrap){
-  if(el){el.style.height='';el.classList.remove('scroll-editing');}
-  if(wrap)wrap.style.height='';
-}
 function renderCanvas(){
   const s=scr();S.sel=s?.sel||null;
   const el=document.getElementById('canvas');
@@ -2257,7 +2276,6 @@ function renderCanvas(){
   const gh=document.getElementById('guideH');
   const PV=S.preview;
   let html='';
-  const wrap=document.querySelector('.canvas-wrap');
   if(S.editingPage){
     const parts=getEditParts()||[];
     html=parts.map(p=>renderPart(p,PV)).join('');
@@ -2265,16 +2283,9 @@ function renderCanvas(){
     if(owner&&owner.type==='fold-list'){
       const it=(owner.items||[])[S.editingPage.itemIdx];
       el.style.background=it?.color||'';
-      resetScrollEditCanvas(el,wrap);
     }else if(owner&&owner.type==='scrollpage'){
       el.style.background='';
-      // 画布延伸为滚动页面的内容高度，使组件可拖到下方 & 可纵向滚动
-      const ch=Math.max(owner.contentH||400,getCanvasSize().h);
-      el.style.height=ch+'px';
-      if(wrap)wrap.style.height=(ch*1)+'px';
-      el.classList.add('scroll-editing');
     }else{
-      resetScrollEditCanvas(el,wrap);
       const pg=(owner?.pages||[])[S.editingPage.pageIdx];
       if(pg&&pg.color){el.style.background=pg.color;}
       else{el.style.background='';}
@@ -2282,9 +2293,9 @@ function renderCanvas(){
   }else{
     if(!s){el.innerHTML='';el.appendChild(svg);el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);return;}
     el.style.background='';
-    resetScrollEditCanvas(el,wrap);
     html=s.parts.map(p=>renderPart(p,PV)).join('');
   }
+  syncCanvasExtent();
   // 屏幕内容放进独立图层（切屏动画只作用于它）
   // 导航栏 / 标题从内容层剥离，放到固定层，切屏时不受影响
   const navParts=[];
@@ -3560,11 +3571,17 @@ function onTS(e){
     const tag=e.target.tagName;
     if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
     if(e.target.closest('input,textarea')) return;
-    if(e.target.closest(PREVIEW_INTERACTIVE_SEL)) return;
     if(e.target.closest('[data-navbar]')) return;   // 导航栏按钮走自身 onclick
+    // 滚动页面内的子组件：可交互（走组件自身行为），但不阻断原生滚动
+    const inScroll=e.target.closest('.sp-scroll');
+    const subPart=e.target.closest('.part');
+    if(inScroll){
+      if(subPart)onPreviewTap(subPart.dataset.id,e);
+      return; // 允许原生纵向滚动
+    }
+    if(e.target.closest(PREVIEW_INTERACTIVE_SEL)) return;
     e.preventDefault();
-    const partEl=e.target.closest('.part');
-    if(partEl)onPreviewTap(partEl.dataset.id,e);
+    if(subPart)onPreviewTap(subPart.dataset.id,e);
     return;
   }
   if(e.target.isContentEditable)return;
@@ -3603,10 +3620,16 @@ function onMD(e){
     const tag=e.target.tagName;
     if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
     if(e.target.closest('input,textarea')) return;
+    if(e.target.closest('[data-navbar]')) return;
+    const inScroll=e.target.closest('.sp-scroll');
+    const subPart=e.target.closest('.part');
+    if(inScroll){
+      if(subPart)onPreviewTap(subPart.dataset.id,e);
+      return;
+    }
     if(e.target.closest(PREVIEW_INTERACTIVE_SEL)) return;
     e.preventDefault();
-    const partEl=e.target.closest('.part');
-    if(partEl)onPreviewTap(partEl.dataset.id,e);
+    if(subPart)onPreviewTap(subPart.dataset.id,e);
     return;
   }
   if(e.target.isContentEditable)return;
