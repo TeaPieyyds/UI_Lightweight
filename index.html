@@ -930,12 +930,11 @@ body.preview .preview-tip{display:block;}
   transition:color .25s;}
 .m3nav-bar .m3nav-item .m3nav-ico{font-size:20px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
 .m3nav-bar .m3nav-item .m3nav-lbl{font-size:10px;white-space:nowrap;opacity:.85;}
-/* 经典样式：一条可滑动的指示条（随选中项平移，带过渡，不瞬移） */
+/* 经典样式：一条可滑动指示条（随选中项平移，带过渡，不瞬移） */
 .m3nav-bar .m3nav-inner{position:relative;}
 .m3nav-bar .m3nav-slide-ind{position:absolute;top:0;height:3px;width:26px;
   border-radius:2px;background:var(--nav-pri);z-index:2;pointer-events:none;
-  transform:translateX(-50%);
-  transition:left .34s cubic-bezier(.34,1.3,.5,1);}
+  transform:translateX(-50%);transition:left .34s cubic-bezier(.34,1.3,.5,1);}
 .m3nav-bar .m3nav-item.on{color:var(--nav-pri);}
 .m3nav-bar .m3nav-item.on .m3nav-ico{transform:scale(1.15) translateY(-2px);}
 .m3nav-bar .m3nav-item:active{background:color-mix(in srgb,var(--nav-pri) 10%,transparent);}
@@ -1023,7 +1022,6 @@ body.preview .m3nav .m3nav-inner{outline:none!important;}
 <div class="stage" id="stage">
   <div class="canvas-wrap" id="canvasWrap">
     <div class="canvas" id="canvas">
-      <div class="screen-layer" id="screenLayer"></div>
       <svg class="link-layer" id="linkLayer"></svg>
       <div class="guide v" id="guideV"></div>
       <div class="guide h" id="guideH"></div>
@@ -1323,7 +1321,6 @@ function navItemsHtml(p){
   const sstyle=p.style||'pill';
   const n=Math.max(1,items.length);
   const pill=`<div class="m3nav-pill" style="width:${100/n}%;transform:translateX(${cur*100}%)"></div>`;
-  // 经典样式：一条指示条，按选中项居中定位（用 left 百分比 + translateX(-50%)）
   const barInd=`<div class="m3nav-slide-ind" style="left:${((cur+0.5)/n*100).toFixed(4)}%"></div>`;
   const btn=(it,i,withLabel)=>`<button class="m3nav-item ${i===cur?'on':''}" data-idx="${i}"
       ${S.preview?`onclick="event.stopPropagation();navGo(event,'${p.id}',${i})"`:''}>
@@ -2333,15 +2330,14 @@ function renderCanvas(){
       return renderPart(p,PV);
     }).join('');
   }
-  // 只重建"屏幕内容层"，保留固定层(svg/guide/导航/标题)避免被销毁 → 过渡不丢
-  let screenLayer=el.querySelector('#screenLayer');
-  if(!screenLayer){
-    screenLayer=document.createElement('div');
-    screenLayer.id='screenLayer';
-    screenLayer.className='screen-layer';
-    el.appendChild(screenLayer);
-  }
-  screenLayer.innerHTML=contentHtml;
+  // 保留固定导航层/标题层（不销毁 → 指示条/胶囊过渡不丢）
+  const oldFixed=el.querySelector('.m3nav-fixed-layer');
+  const oldTitles=el.querySelector('.m3title-fixed-layer');
+  el.innerHTML=`<div class="screen-layer" id="screenLayer">${contentHtml}</div>`;
+  el.appendChild(svg);
+  el.appendChild(gv);el.appendChild(gh);el.appendChild(fb);
+  if(oldFixed)el.appendChild(oldFixed);
+  if(oldTitles)el.appendChild(oldTitles);
   renderFixedNavbars(navParts);
   renderFixedTitles();
   bindParts();bindCarousels();updateFloatBar();updateLinkLayer();
@@ -2411,11 +2407,8 @@ function syncNavInPlace(el,p){
     pill.style.width=(100/n)+'%';
     pill.style.transform=`translateX(${cur*100}%)`;
   }
-  // 经典样式：指示条随选中项平移（带过渡，丝滑不瞬移）
   const ind=el.querySelector('.m3nav-slide-ind');
-  if(ind){
-    ind.style.left=((cur+0.5)/n*100).toFixed(4)+'%';
-  }
+  if(ind)ind.style.left=((cur+0.5)/n*100).toFixed(4)+'%';
   el.querySelectorAll('.m3nav-item').forEach((btn,i)=>{
     btn.classList.toggle('on',i===cur);
   });
